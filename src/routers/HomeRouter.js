@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Layout, Menu, Drawer, Avatar, Row, Typography } from 'antd'
+import { Layout, Menu, Drawer, Avatar, Row, Typography, message } from 'antd'
 import { Switch, Route, Redirect, Link, useLocation } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
+import Loading from '../screens/Loading'
+import firebase from 'firebase/app'
+import 'firebase/firestore'
+import 'firebase/storage'
+import 'firebase/auth'
 
 import { HOME_ROUTE } from './router'
 
@@ -23,16 +28,48 @@ HeaderSection.propTypes = {
 }
 
 const RootRouter = () => {
-  const [shouldHideDrawer, setHideDrawer] = useState(window.screen.width < 992)
+  const [isAuth, setAuth] = useState(null)
+  const [shouldHideDrawer, setHideDrawer] = useState(window.innerWidth < 992)
   const [isDrawerOpened, setDrawer] = useState(false)
 
+  // user infomation
+  const [avatar, setAvatar] = useState(null)
+  const [name, setName] = useState(null)
+  const getAvatar = async path => {
+    const storage = firebase.storage()
+    try {
+      const url = await storage.ref().child(path).getDownloadURL()
+      setAvatar(url)
+    } catch (error) {
+      console.log(error)
+      message.error('something is wrong with avatar')
+    }
+  }
+
   const location = useLocation()
-  console.log(location.pathname)
 
   useEffect(() => {
+    console.log(location.pathname)
+    firebase.auth().onAuthStateChanged(async user => {
+      if (user) {
+        const db = firebase.firestore()
+        try {
+          const doc = await db.collection('users').doc(user.uid).get()
+          if (doc.exists) {
+            const info = doc.data()
+            setName(`${info.fname || ''} ${info.lname || ''}`)
+            if (info.picture_profile) await getAvatar(info.picture_profile)
+          } else setName('Guest')
+        } catch (error) {
+          message.error('there is some problem with user infomation')
+        }
+        setAuth(true)
+      } else setAuth(false)
+    })
+
     const reportWindowSize = () => {
       console.log('resize')
-      setHideDrawer(window.screen.width < 992)
+      setHideDrawer(window.innerWidth < 992)
     }
 
     window.addEventListener('resize', reportWindowSize)
@@ -40,7 +77,7 @@ const RootRouter = () => {
     return () => {
       window.removeEventListener('resize', reportWindowSize)
     }
-  })
+  }, [])
 
   const styles = {
     header: {
@@ -54,8 +91,7 @@ const RootRouter = () => {
     hamburgerButton: {
       transform: 'scale(0.7)',
       padding: 0,
-      float: 'left',
-      display: shouldHideDrawer ? 'block' : 'none'
+      float: 'right'
     }
   }
 
@@ -64,7 +100,9 @@ const RootRouter = () => {
   }
 
   const header = () => {
-    const current = HOME_ROUTE.find(route => route.path === location.pathname)
+    const current = HOME_ROUTE.find(
+      route => route.path === location.pathname.replace(/\/$/, '')
+    )
     return current ? current.name : ''
   }
 
@@ -74,16 +112,17 @@ const RootRouter = () => {
         <Row
           onClick={changeScreenState}
           style={{ padding: '10px', alignItems: 'center' }}>
-          <Avatar size={50} icon={<UserOutlined />} />
+          <Avatar size={50} src={avatar} icon={<UserOutlined />} />
           <Title style={{ padding: '0 10px', margin: 0 }} level={5}>
-            Guest
+            {name}
           </Title>
         </Row>
       </Link>
       <Menu mode="inline" defaultSelectedKeys={[]} selectedKeys={header()}>
         {/* <Avatar size={64} icon={<UserOutlined />} /> */}
         {HOME_ROUTE.map(route => {
-          if (route.name === 'Profile') return null
+          const exeptRoute = ['Exam', 'Profile', 'Quiz Detail', 'Quiz Solution']
+          if (exeptRoute.indexOf(route.name) > -1) return null
           return (
             <Menu.Item onClick={changeScreenState} key={route.name}>
               <Link to={route.path}>{route.name}</Link>
@@ -93,6 +132,9 @@ const RootRouter = () => {
       </Menu>
     </>
   )
+
+  if (isAuth === null) return <Loading color="#1890ff" />
+  else if (isAuth === false) return <Redirect to="/login" />
 
   return (
     <Layout style={styles.layout}>
@@ -114,29 +156,33 @@ const RootRouter = () => {
       </Drawer>
       <Layout>
         <Header style={styles.header}>
-          <HeaderSection>
-            {/* burger button */}
-            <button
-              onClick={() => {
-                setDrawer(!isDrawerOpened)
-              }}
-              style={styles.hamburgerButton}
-              className={
-                'hamburger hamburger--squeeze' +
-                (isDrawerOpened ? ' is-active' : '')
-              }
-              type="button">
-              <span className="hamburger-box">
-                <span className="hamburger-inner"></span>
-              </span>
-            </button>
-          </HeaderSection>
+          <HeaderSection/>
           <HeaderSection>
             {/* Screen Header */}
             <h1 style={{ lineHeight: 'normal' }}>{header()}</h1>
           </HeaderSection>
+          <HeaderSection>
+            {/* burger button */}
+            {
+            shouldHideDrawer
+              ? (<button
+                  onClick={() => {
+                    setDrawer(!isDrawerOpened)
+                  }}
+                  style={styles.hamburgerButton}
+                  className={
+                    'hamburger hamburger--squeeze' +
+                    (isDrawerOpened ? ' is-active' : '')
+                  }
+                  type="button">
+                  <span className="hamburger-box">
+                    <span className="hamburger-inner"></span>
+                  </span>
+                </button>)
+              : null}
+          </HeaderSection>
         </Header>
-        <Content>
+        <Content style={{ paddingLeft: '10px', paddingRight: '10px' }}>
           <Switch>
             {HOME_ROUTE.map(r => (
               <Route key={r.name} path={r.path} component={r.component} />

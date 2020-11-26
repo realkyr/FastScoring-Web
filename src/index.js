@@ -3,6 +3,22 @@ import ReactDOM from 'react-dom'
 import './index.css'
 import App from './App'
 import reportWebVitals from './reportWebVitals'
+import firebase from 'firebase/app'
+import 'firebase/analytics'
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyAr24CJWPlGFHq-zKTEBqyIOeUr7V79xyA',
+  authDomain: 'fastscoring.firebaseapp.com',
+  databaseURL: 'https://fastscoring.firebaseio.com',
+  projectId: 'fastscoring',
+  storageBucket: 'fastscoring.appspot.com',
+  messagingSenderId: '875221436773',
+  appId: '1:875221436773:web:c86c66e72e662015e8f98c',
+  measurementId: 'G-QBE8YVWJZZ'
+}
+
+firebase.initializeApp(firebaseConfig)
+firebase.analytics()
 
 ReactDOM.render(
   <React.StrictMode>
