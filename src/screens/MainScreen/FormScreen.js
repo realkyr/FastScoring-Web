@@ -1,14 +1,20 @@
 import React from 'react'
-import { Button } from 'antd'
+import { Button, Row, Col, Typography, Skeleton, Image } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 
 import AddFormModal from '../../components/form/AddFormModal'
+
+import firebase from 'firebase/app'
+import 'firebase/firestore'
+
+const { Title, Paragraph } = Typography
 
 export default class FormScreen extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
-      modalVisible: false
+      modalVisible: false,
+      forms: null
     }
 
     this.toggleModal = this.toggleModal.bind(this)
@@ -18,18 +24,108 @@ export default class FormScreen extends React.Component {
     this.setState({ modalVisible: !this.state.modalVisible })
   }
 
+  componentDidMount () {
+    const db = firebase.firestore()
+    const user = firebase.auth().currentUser
+    const ref = db.collection('forms')
+
+    // listen for form update
+    this.unsub = ref.where('available', '==', true).where('owner', '==', user.uid).onSnapshot(snapshots => {
+      const forms = { ...this.state.forms }
+      snapshots.docChanges().forEach(change => {
+        if (change.type === 'removed') {
+          // if form has been delete
+          delete forms[change.doc.id]
+        } else {
+          // if form change or form added
+          forms[change.doc.id] = change.doc.data()
+        }
+      })
+      this.setState({ forms })
+    })
+  }
+
+  componentWillUnmount () {
+    this.unsub && this.unsub()
+  }
+
+  _createformsList () {
+    const { forms } = this.state
+    if (forms == null) {
+      return (
+        <Col xs={24}>
+          <div
+            style={{
+              borderRadius: '5px',
+              boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+              cursor: 'pointer',
+              background: 'white',
+              width: '100%'
+            }}>
+            <Skeleton paragraph={false} active />
+            <Skeleton paragraph={false} active />
+          </div>
+        </Col>
+      )
+    }
+    return [...Object.keys(forms).map(fid => {
+      return (
+          <Col key={fid} xs={24} md={12} lg={6}>
+            {/* <Link to={'/form/' + fid}> */}
+            <div
+              style={{
+                borderRadius: '5px',
+                boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+                cursor: 'pointer',
+                background: 'white',
+                width: '100%',
+                overflow: 'hidden',
+                height: 280
+              }}>
+              <div style={{ overflow: 'hidden', height: 200 }}>
+                <Image preview={false} src={forms[fid].url.answer_sheet} />
+              </div>
+              <div style={{ height: 80 }}>
+                <Title level={3}>{forms[fid].name}</Title>
+                <Paragraph ellipsis>{forms[fid].description || 'lorem ipsum'}</Paragraph>
+              </div>
+            </div>
+          </Col>
+      )
+    }),
+    <Col key="add-form-button" xs={24} md={12} lg={6}>
+        <div
+          onClick={this.toggleModal}
+          style={{
+            borderRadius: '5px',
+            boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+            cursor: 'pointer',
+            background: 'white',
+            width: '100%',
+            overflow: 'hidden',
+            height: 280,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+          <Button
+            onClick={this.toggleModal}
+            size="large"
+            type="primary"
+            shape="circle"
+            icon={<PlusOutlined />}
+          />
+        </div>
+    </Col>
+    ]
+  }
+
   render () {
     const { modalVisible } = this.state
     return (
       <>
+        <Row gutter={[16, 16]}>{this._createformsList()}</Row>
         <AddFormModal visible={modalVisible} toggleModal={this.toggleModal} />
-        <Button
-          onClick={this.toggleModal}
-          size="large"
-          type="primary"
-          shape="circle"
-          icon={<PlusOutlined />}
-        />
       </>
     )
   }

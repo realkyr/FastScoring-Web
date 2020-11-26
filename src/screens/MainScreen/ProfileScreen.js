@@ -2,13 +2,11 @@ import React, { useEffect, useState } from 'react'
 import 'cropperjs/dist/cropper.css'
 import '../../assets/styles/croppercircular.css'
 import Cropper from 'cropperjs'
-import { Upload, Image, Modal, Avatar, Input, Button, message, Progress } from 'antd'
-import { UserOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons'
+import { Upload, Image, Modal, Avatar, Input, Button, message, Progress, Spin } from 'antd'
+import { LoadingOutlined, UserOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons'
 import firebase from 'firebase/app'
 import 'firebase/storage'
 import 'firebase/auth'
-
-import Loading from '../Loading'
 
 export default function ProfileScreen () {
   const [fname, setFname] = useState('')
@@ -21,6 +19,7 @@ export default function ProfileScreen () {
   const [modal, setModal] = useState(false)
   const [avartar, setAvatar] = useState(null)
   const [progress, setProgress] = useState(null)
+  const loadingIcon = <LoadingOutlined style={{ marginRight: '5px', color: '#1890ff' }} spin />
 
   const styles = {
     inputStyle: {
@@ -126,7 +125,12 @@ export default function ProfileScreen () {
       console.log(error)
     }
   }
-  if (isLoading) return <Loading />
+  const logout = () => {
+    const auth = firebase.auth()
+    auth.signOut()
+  }
+
+  if (isLoading) return <Spin indicator={loadingIcon} />
 
   return (
     <div
@@ -215,6 +219,13 @@ export default function ProfileScreen () {
           icon={<SaveOutlined />}
           size={60}>
           Save
+        </Button>
+        <Button
+          onClick={logout}
+          style={styles.inputStyle}
+          shape="round"
+          size={60}>
+          Log Out
         </Button>
       </div>
     </div>

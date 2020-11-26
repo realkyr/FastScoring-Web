@@ -1,4 +1,5 @@
 import Form from '../screens/MainScreen/FormScreen'
+import FormDetail from '../screens/MainScreen/FormDetailScreen'
 import Quiz from '../screens/MainScreen/QuizScreen'
 import QuizDetail from '../screens/MainScreen/QuizDetailScreen'
 import QuizSolution from '../screens/MainScreen/QuizSolutionScreen'
@@ -12,6 +13,11 @@ const HOME_ROUTE = [
     name: 'Form',
     path: ROOT_PATH + 'form',
     component: Form
+  },
+  {
+    name: 'Form Detail',
+    path: ROOT_PATH + 'form/:id',
+    component: FormDetail
   },
   {
     name: 'Exam',

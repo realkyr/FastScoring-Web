@@ -150,14 +150,14 @@ export default class AddFormModal extends React.Component {
       case 1: {
         return this.state.answerResult
           ? (
-              <Image width={700} src={this.state.answerResult} />
+              <Image src={this.state.answerResult} />
             )
           : null
       }
       case 2: {
         return this.state.studentResult
           ? (
-              <Image width={500} src={this.state.studentResult} />
+              <Image src={this.state.studentResult} />
             )
           : null
       }
@@ -375,6 +375,8 @@ export default class AddFormModal extends React.Component {
         }
         await this.formRef.set({
           name: formName,
+          owner: user.uid,
+          available: true,
           url
         }, { merge: true })
         message.success('Upload Form successful')
@@ -441,7 +443,6 @@ export default class AddFormModal extends React.Component {
               display: !this.state.pdfFileImg || this.state.step === 3 ? 'none' : 'block'
             }}>
             <Image
-              width={400}
               id="image-cropper"
               src={this.state.pdfFileImg}
               preview={false}

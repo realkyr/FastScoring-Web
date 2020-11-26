@@ -5,6 +5,7 @@ import { Skeleton } from 'antd'
 import firebase from 'firebase/app'
 import 'firebase/firestore'
 import 'firebase/storage'
+import 'firebase/auth'
 
 export default function ExamScreen () {
   const { examid } = useParams()
@@ -28,10 +29,11 @@ export default function ExamScreen () {
         const examInfo = s.data()
         const qdoc = await examInfo.quiz.get()
         const qid = qdoc.id
+        const user = firebase.auth().currentUser
         if (examInfo.status === 'done') {
           const storage = firebase.storage()
           const originalReference = storage.ref(
-            'exam/74faVJfVHFPNnXCYCBexOVAGsQ02/' +
+            'exams/' + user.uid + '/' +
               qid +
               '/' +
               `${examid}_${examInfo.filename}`
@@ -69,9 +71,15 @@ export default function ExamScreen () {
             {img()}
             {Object.keys(exam.result).map(key => (
               <p key={key}>
-                {key} {JSON.stringify(exam.result[key])}
+                {key} {exam.result[key].correct ? 'ตอบถูก' : 'ตอบผิด'}
               </p>
             ))}
+            <h4>คะแนนที่ได้ </h4>
+            {
+              Object.keys(exam.result).filter(key => {
+                return exam.result[key].correct
+              }).length
+            }
           </div>
           )
         : (

@@ -22,7 +22,7 @@ export default function QuizDetailScreen () {
     console.log('hello firebase')
     const db = firebase.firestore()
     const examstmp = {}
-    const ref = db.collection('exams')
+    const ref = db.collection('exams').where('quiz', '==', db.collection('quizzes').doc(quizid))
     const docs = await ref.get()
     ref.onSnapshot(snapshot => {
       snapshot.forEach(s => {
@@ -38,6 +38,7 @@ export default function QuizDetailScreen () {
       })
     })
     docs.forEach(d => {
+      console.log(d.id)
       examstmp[d.id] = d.data()
     })
     setExams(examstmp)
@@ -45,19 +46,19 @@ export default function QuizDetailScreen () {
 
   const upload = ({ file, onProgress, onSuccess, onError }) => {
     const db = firebase.firestore()
+    const user = firebase.auth().currentUser
     const ref = db.collection('exams').doc()
     const eid = ref.id
     const filename = eid + '_' + file.name
 
     const storageRef = storage
       .ref()
-      .child(`exam/74faVJfVHFPNnXCYCBexOVAGsQ02/${quizid}/${filename}`)
+      .child(`exams/${user.uid}/${quizid}/${filename}`)
     ref.set({
       filename: file.name,
       status: 'uploading',
-      owner: '74faVJfVHFPNnXCYCBexOVAGsQ02',
-      form: db.collection('forms').doc('7JPPqkoZOdwv8aftPoWR'),
-      quiz: db.collection('quiz').doc(quizid)
+      owner: user.uid,
+      quiz: db.collection('quizzes').doc(quizid)
     })
     const uploadTask = storageRef.put(file)
 

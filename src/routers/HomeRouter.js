@@ -121,7 +121,7 @@ const RootRouter = () => {
       <Menu mode="inline" defaultSelectedKeys={[]} selectedKeys={header()}>
         {/* <Avatar size={64} icon={<UserOutlined />} /> */}
         {HOME_ROUTE.map(route => {
-          const exeptRoute = ['Exam', 'Profile', 'Quiz Detail', 'Quiz Solution']
+          const exeptRoute = ['Exam', 'Profile', 'Form Detail', 'Quiz Detail', 'Quiz Solution']
           if (exeptRoute.indexOf(route.name) > -1) return null
           return (
             <Menu.Item onClick={changeScreenState} key={route.name}>
