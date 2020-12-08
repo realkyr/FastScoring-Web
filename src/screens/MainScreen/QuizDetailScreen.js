@@ -61,7 +61,7 @@ export default function QuizDetailScreen () {
     setExams(examstmp)
   }, [])
 
-  const upload = ({ file, onProgress, onSuccess, onError }) => {
+  const upload = async ({ file, onProgress, onSuccess, onError }) => {
     const db = firebase.firestore()
     const user = firebase.auth().currentUser
     const ref = db.collection('exams').doc()
@@ -71,7 +71,7 @@ export default function QuizDetailScreen () {
     const storageRef = storage
       .ref()
       .child(`exams/${user.uid}/${quizid}/${filename}`)
-    ref.set({
+    await ref.set({
       filename: file.name,
       status: 'uploading',
       owner: user.uid,
