@@ -49,12 +49,7 @@ export default function QuizDetailScreen () {
         setExams(prevState => {
           return {
             ...prevState,
-            [s.id]: {
-              ...prevState[s.id],
-              status: s.data().status,
-              sid: s.data().sid,
-              result: s.data().result
-            }
+            [s.id]: s.data()
           }
         })
       })
@@ -195,7 +190,7 @@ export default function QuizDetailScreen () {
               <Panel key={eid} header={
                 <Row justify="space-between">
                   {/* {exams[eid].filename} */}
-                  <Col span={12}><Title style={{ margin: 0 }} level={4}>{exams[eid].sid}</Title></Col>
+                  <Col span={12}><Title style={{ margin: 0 }} level={4}>{exams[eid].sid || 'กำลังตรวจ'}</Title></Col>
                   <Col style={{
                     display: 'flex',
                     justifyContent: 'flex-end'
