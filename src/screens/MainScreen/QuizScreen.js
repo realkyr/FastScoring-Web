@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, Row, Col, Typography, Skeleton } from 'antd'
+import { Button, Row, Col, Typography, Skeleton, Image } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import firebase from 'firebase/app'
@@ -74,15 +74,19 @@ export default class Quizcreen extends React.Component {
     const { quizzes } = this.state
     if (quizzes == null) {
       return (
-        <Col xs={24}>
+        <Col xs={24} md={12} lg={6}>
           <div
             style={{
               borderRadius: '5px',
               boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
               cursor: 'pointer',
               background: 'white',
-              width: '100%'
+              width: '100%',
+              height: 280
             }}>
+            <div style={{ overflow: 'hidden', height: 200 }}>
+              <Image width="100%" preview={false} src={require('../../assets/img/quiz placeholder.jpg').default} />
+            </div>
             <Skeleton paragraph={false} active />
             <Skeleton paragraph={false} active />
           </div>
@@ -103,9 +107,9 @@ export default class Quizcreen extends React.Component {
                   overflow: 'hidden',
                   height: 280
                 }}>
-                {/* <div style={{ overflow: 'hidden', height: 200 }}>
-                  <Image preview={false} src={quizzes[qid].url.answer_sheet} />
-                </div> */}
+                <div style={{ overflow: 'hidden', height: 200 }}>
+                  <Image width="100%" preview={false} src={require('../../assets/img/quiz placeholder.jpg').default} />
+                </div>
                 <div style={{ height: 80 }}>
                   <Title level={3}>{quizzes[qid].name}</Title>
                   <Paragraph ellipsis>{quizzes[qid].description || 'lorem ipsum'}</Paragraph>

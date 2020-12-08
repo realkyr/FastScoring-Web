@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Skeleton } from 'antd'
-
+import { Skeleton, Row, Col, Image, Typography, Table } from 'antd'
+import {
+  CheckCircleFilled,
+  CloseCircleFilled
+} from '@ant-design/icons'
 import firebase from 'firebase/app'
 import 'firebase/firestore'
 import 'firebase/storage'
 import 'firebase/auth'
+
+const { Title } = Typography
 
 export default function ExamScreen () {
   const { examid } = useParams()
@@ -54,36 +59,80 @@ export default function ExamScreen () {
     }
     return (
       <>
-        <img style={{ maxWidth: '700px' }} src={original} alt="original" />
-        <img style={{ maxWidth: '700px' }} src={result} alt="result" />
+        <Row className="result-images">
+          <Col xs={12}>
+            <Title level={4}>Original Image :</Title>
+            <Image src={original} alt="original" />
+          </Col>
+          <Col xs={12}>
+            <Title level={4}>Result Image :</Title>
+            <Image src={result} alt="result" />
+          </Col>
+        </Row>
       </>
     )
   }
+
+  const dataSource = exam
+    ? Object.keys(exam.result).map(clause => {
+        return {
+          key: clause,
+          clause,
+          ...exam.result[clause],
+          correct: (exam.result[clause].correct
+            ? <CheckCircleFilled style={{ color: '#52c41a' }}/>
+            : <CloseCircleFilled style={{ color: '#ff4d4f' }}/>
+          ),
+          score: (exam.result[clause].correct ? 1 : 0)
+        }
+      })
+    : []
+
+  const columns = [
+    {
+      title: 'ข้อ',
+      dataIndex: 'clause',
+      key: 'clause'
+    },
+    {
+      title: 'ข้อที่ตอบ',
+      dataIndex: 'user_choice',
+      key: 'user_choice'
+    },
+    {
+      title: 'ข้อที่ถูก',
+      dataIndex: 'correct_choice',
+      key: 'correct_choice'
+    },
+    {
+      title: 'ตรวจ',
+      dataIndex: 'correct',
+      key: 'correct'
+    },
+    {
+      title: 'คะแนนที่ได้',
+      dataIndex: 'score',
+      key: 'score'
+    }
+  ]
 
   return <div>
     {exam === null
       ? (
         <Skeleton paragraph={false} active />
         )
-      : exam.status === 'done'
-        ? (
-          <div>
-            {img()}
-            {Object.keys(exam.result).map(key => (
-              <p key={key}>
-                {key} {exam.result[key].correct ? 'ตอบถูก' : 'ตอบผิด'}
-              </p>
-            ))}
-            <h4>คะแนนที่ได้ </h4>
-            {
-              Object.keys(exam.result).filter(key => {
-                return exam.result[key].correct
-              }).length
-            }
-          </div>
-          )
-        : (
-            exam.status
-          )}
+      : <>
+          {img()}
+          <Table pagination={{
+            hideOnSinglePage: true
+          }} footer={() => {
+            let sum = 0
+            dataSource.forEach(clause => {
+              sum += clause.score
+            })
+            return `คะแนนรวม ${sum}`
+          }} dataSource={dataSource} columns={columns} />
+        </>
+    }
   </div>
 }

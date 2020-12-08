@@ -49,3 +49,27 @@
     transform: rotate(360deg);
   }
 }
+
+[data-theme='compact'] .site-collapse-custom-collapse .site-collapse-custom-panel,
+.site-collapse-custom-collapse .site-collapse-custom-panel {
+  background: #f7f7f7;
+  border-radius: 2px;
+  margin-bottom: 24px;
+  border: 0px;
+  overflow: hidden;
+}
+
+.ant-collapse-header,
+.ant-collapse-content-box {
+  background: #f7f7f7;
+}
+
+.ant-collapse.exams-result {
+  width: 100%
+}
+
+.result-images img {
+  max-height: 500px;
+  width: auto;
+  max-width: 100%;
+}
