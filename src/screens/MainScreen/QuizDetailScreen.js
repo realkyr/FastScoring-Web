@@ -44,7 +44,7 @@ export default function QuizDetailScreen () {
     const qdocs = await qref.get()
     setQuiz(qdocs.data())
     const docs = await ref.get()
-    ref.onSnapshot(snapshot => {
+    const unsub = ref.onSnapshot(snapshot => {
       snapshot.forEach(s => {
         setExams(prevState => {
           return {
@@ -59,6 +59,8 @@ export default function QuizDetailScreen () {
       examstmp[d.id] = d.data()
     })
     setExams(examstmp)
+
+    return () => { unsub && unsub() }
   }, [])
 
   const upload = async ({ file, onProgress, onSuccess, onError }) => {
