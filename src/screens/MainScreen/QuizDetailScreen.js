@@ -1,7 +1,8 @@
 // import ExamCard from '../../components/quiz/ExamCard'
 
-import React, { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import React from 'react'
+import PropTypes from 'prop-types'
+import { Link } from 'react-router-dom'
 import Loading from '../Loading'
 
 import { Collapse, Button, Upload, message, Row, Col, Skeleton, Tooltip, Progress, Statistic, Typography } from 'antd'
@@ -29,41 +30,46 @@ const styles = {
   }
 }
 
-export default function QuizDetailScreen () {
-  const { quizid } = useParams()
-  const [quiz, setQuiz] = useState(null)
-  const [exams, setExams] = useState(null)
+class QuizDetailScreen extends React.Component {
+  constructor (props) {
+    super(props)
+    this.state = {
+      quiz: null,
+      exams: null
+    }
 
-  const storage = firebase.storage()
+    this.upload = this.upload.bind(this)
+  }
 
-  useEffect(async () => {
+  async componentDidMount () {
+    const { quizid } = this.props.match.params
     const db = firebase.firestore()
-    const examstmp = {}
     const ref = db.collection('exams').where('quiz', '==', db.collection('quizzes').doc(quizid))
     const qref = db.collection('quizzes').doc(quizid)
     const qdocs = await qref.get()
-    setQuiz(qdocs.data())
-    const docs = await ref.get()
-    const unsub = ref.onSnapshot(snapshot => {
+    this.setState({
+      quiz: qdocs.data()
+    })
+
+    // add listener
+    this.unsub = ref.onSnapshot(snapshot => {
+      const exams = {}
       snapshot.forEach(s => {
-        setExams(prevState => {
-          return {
-            ...prevState,
-            [s.id]: s.data()
-          }
-        })
+        exams[s.id] = s.data()
+      })
+      this.setState({
+        exams
       })
     })
-    docs.forEach(d => {
-      console.log(d.id)
-      examstmp[d.id] = d.data()
-    })
-    setExams(examstmp)
+  }
 
-    return () => { unsub && unsub() }
-  }, [])
+  componentWillUnmount () {
+    this.unsub && this.unsub()
+  }
 
-  const upload = async ({ file, onProgress, onSuccess, onError }) => {
+  async upload ({ file, onProgress, onSuccess, onError }) {
+    const { quizid } = this.props.match.params
+    const storage = firebase.storage()
     const db = firebase.firestore()
     const user = firebase.auth().currentUser
     const ref = db.collection('exams').doc()
@@ -93,9 +99,9 @@ export default function QuizDetailScreen () {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
         console.log(eid, progress)
 
-        setExams(prevState => {
-          return {
-            ...prevState,
+        this.setState({
+          exams: {
+            ...this.state.exams,
             [eid]: {
               filename: file.name,
               status: 'uploading',
@@ -122,15 +128,6 @@ export default function QuizDetailScreen () {
         // uploadTask.snapshot.ref.getDownloadURL().then(function (downloadURL) {
         //   console.log('File available at', downloadURL)
         // })
-        setExams(prevState => {
-          return {
-            ...prevState,
-            [eid]: {
-              ...prevState[eid],
-              status: 'upload finish'
-            }
-          }
-        })
         ref.update({
           status: 'upload finish',
           progress: 100
@@ -140,196 +137,175 @@ export default function QuizDetailScreen () {
     )
   }
 
-  const props = {
-    name: 'file',
-    customRequest: upload,
-    showUploadList: false,
-    multiple: true,
-    onChange (info) {
-      const { status } = info.file
-      console.log(info.file)
-      if (status !== 'uploading') {
-        console.log(info.file, info.fileList)
-      }
-      if (status === 'done') {
-        message.success(`${info.file.name} file uploaded successfully.`)
-      } else if (status === 'error') {
-        message.error(`${info.file.name} file upload failed.`)
+  render () {
+    const { quizid } = this.props.match.params
+    const { exams, quiz } = this.state
+    const props = {
+      name: 'file',
+      customRequest: this.upload,
+      showUploadList: false,
+      multiple: true,
+      onChange (info) {
+        const { status } = info.file
+        console.log(info.file)
+        if (status !== 'uploading') {
+          console.log(info.file, info.fileList)
+        }
+        if (status === 'done') {
+          message.success(`${info.file.name} file uploaded successfully.`)
+        } else if (status === 'error') {
+          message.error(`${info.file.name} file upload failed.`)
+        }
       }
     }
-  }
 
-  if (exams == null) return <Loading color="#1890ff" />
+    if (exams == null) return <Loading color="#1890ff" />
 
-  const calculateScore = results => {
-    if (!results) return 'กำลังตรวจ'
-    let score = 0
-    Object.values(results).forEach(r => {
-      score += (r.correct ? 1 : 0)
-    })
-    return score
-  }
+    const calculateMaxScore = () => {
+      if (!quiz || !quiz.amount) return 'ไม่ระบุคะแนนเต็ม'
+      return quiz.amount
+    }
 
-  const calculateMaxScore = () => {
-    if (!quiz || !quiz.amount) return 'ไม่ระบุคะแนนเต็ม'
-    return quiz.amount
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  const createExamList = () => {
-    if (exams === null) {
+    // eslint-disable-next-line no-unused-vars
+    const createExamList = () => {
+      if (exams === null) {
+        return (
+          <Col xs={24}>
+            <Skeleton paragraph={false} active />
+          </Col>
+        )
+      }
       return (
-        <Col xs={24}>
-          <Skeleton paragraph={false} active />
-        </Col>
+        <Collapse className="exams-result">
+          {
+            Object.keys(exams).map(eid => {
+              return (
+                <Panel key={eid} header={
+                  <Row justify="space-between">
+                    {/* {exams[eid].filename} */}
+                    <Col span={12}><Title style={{ margin: 0 }} level={4}>{exams[eid].sid || 'กำลังตรวจ'}</Title></Col>
+                    <Col style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end'
+                    }} span={4}>
+                      <Statistic title="Scoring" value={exams[eid].score} suffix={`/ ${calculateMaxScore()}`} />
+                    </Col>
+                  </Row>
+                }>
+                  <Row justify="space-between">
+                    <Col span={12}><Title level={5}>status: {exams[eid].status}</Title></Col>
+                    <Col style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end'
+                    }} span={12}>
+                      <Link to={'/quiz/exam/' + eid}>
+                        <Button>See More</Button>
+                      </Link>
+                    </Col>
+                  </Row>
+                </Panel>
+              )
+            })
+          }
+        </Collapse>
       )
     }
-    return (
-      <Collapse className="exams-result">
-        {
-          Object.keys(exams).map(eid => {
-            return (
-              <Panel key={eid} header={
-                <Row justify="space-between">
-                  {/* {exams[eid].filename} */}
-                  <Col span={12}><Title style={{ margin: 0 }} level={4}>{exams[eid].sid || 'กำลังตรวจ'}</Title></Col>
-                  <Col style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end'
-                  }} span={4}>
-                    <Statistic title="Scoring" value={calculateScore(exams[eid].result)} suffix={`/ ${calculateMaxScore()}`} />
-                  </Col>
-                </Row>
-              }>
-                <Row justify="space-between">
-                  <Col span={12}><Title level={5}>status: {exams[eid].status}</Title></Col>
-                  <Col style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end'
-                  }} span={12}>
-                    <Link to={'/quiz/exam/' + eid}>
-                      <Button>See More</Button>
-                    </Link>
-                  </Col>
-                </Row>
-              </Panel>
-            )
-          })
+
+    // calculate statistics
+    let pass = 0
+    let fail = 0
+    const examiners = Object.keys(exams).length
+    const scoredExaminers = Object.keys(exams).filter(e => exams[e].status === 'done').length
+
+    Object.values(exams).forEach(e => {
+      if (e.status === 'done' && e.score) {
+        const score = e.score
+        if (!quiz.amount) {
+          pass += 1
+          return
         }
-      </Collapse>
-    )
-    // return Object.keys(exams).map(eid => {
-    //   return (
-    //     <Col key={eid} xs={24} md={12} lg={6}>
-    //       <Link to={'/quiz/exam/' + eid}>
-    //         {/* <ExamCard
-    //           status={exams[eid].status}
-    //           filename={exams[eid].filename}
-    //           progress={
-    //             exams[eid].progress
-    //               ? exams[eid].progress
-    //               : exams[eid].status === 'done'
-    //                 ? 100
-    //                 : 0
-    //           }
-    //         /> */}
-
-    //       </Link>
-    //     </Col>
-    //   )
-    // })
-  }
-
-  // calculate statistics
-  let pass = 0
-  let fail = 0
-  const examiners = Object.keys(exams).length
-
-  Object.values(exams).forEach(e => {
-    let score = 0
-    if (e.status === 'done' && e.result) {
-      Object.values(e.result).forEach(r => {
-        score += (r.correct ? 1 : 0)
-      })
-      if (!quiz.amount) {
-        pass += 1
-        return
+        if (score >= quiz.amount / 2) pass += 1
+        else fail += 1
       }
-      if (score >= quiz.amount / 2) pass += 1
-      else fail += 1
-    }
-  })
+    })
 
-  return (
-    <div style={{ textAlign: 'left' }}>
-      <Link to={`/quiz/${quizid}/solution`}>
-        <Button type="primary" shape="round" icon={<EditOutlined />} size={50}>
-          Edit Solution
-        </Button>
-      </Link>
-      <Dragger {...props}>
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p className="ant-upload-text">
-          Click or drag file to this area to upload
-        </p>
-        <p className="ant-upload-hint">drop files to score your answer sheet</p>
-      </Dragger>
-      <Row style={{
-        marginTop: 10,
-        background: '#f7f7f7'
-      }} gutter={[40, 20]}>
-        <Col style={styles.centerAll} xs={14} lg={4}>
-          <Tooltip>
-            <Progress
-              percent={Object.keys(exams).filter(e => exams[e].status === 'done').length / examiners * 100}
-              format={() => (((pass / examiners) * 100).toFixed(2) + ' %')}
-              strokeColor="red"
-              trailColor="#cacaca"
-              success={{ percent: (pass / examiners) * 100 }}
-              type="circle"
+    return (
+      <div style={{ textAlign: 'left' }}>
+        <Link to={`/quiz/${quizid}/solution`}>
+          <Button type="primary" shape="round" icon={<EditOutlined />} size={50}>
+            Edit Solution
+          </Button>
+        </Link>
+        <Dragger {...props}>
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">
+            Click or drag file to this area to upload
+          </p>
+          <p className="ant-upload-hint">drop files to score your answer sheet</p>
+        </Dragger>
+        <Row style={{
+          marginTop: 10,
+          background: '#f7f7f7'
+        }} gutter={[40, 20]}>
+          <Col style={styles.centerAll} xs={14} lg={4}>
+            <Tooltip>
+              <Progress
+                percent={scoredExaminers / examiners * 100}
+                format={(percent) => (percent.toFixed(2) + '%')}
+                strokeColor="red"
+                trailColor="#cacaca"
+                success={{ percent: (pass / examiners) * 100 }}
+                type="circle"
+              />
+            </Tooltip>
+          </Col>
+          <Col style={styles.verticalCenter} xs={10} lg={3}>
+            <Row gutter={[16, 20]}>
+              <Col xs={24}>
+                <Statistic title="All Examiner" value={examiners} />
+              </Col>
+              <Col span={10}>
+                <Statistic title="Pass" value={pass} />
+              </Col>
+              <Col span={10}>
+                <Statistic title="Fail" value={fail} />
+              </Col>
+            </Row>
+          </Col>
+          <Col style={styles.centerAll} xs={14} lg={5}>
+            <Tooltip>
+              <Progress
+                trailColor="#cacaca"
+                percent={Object.keys(exams).filter(e => exams[e].status === 'done').length / examiners * 100}
+                showInfo={false}
+              />
+            </Tooltip>
+          </Col>
+          <Col style={styles.verticalCenter} xs={10} lg={4}>
+            <Statistic title="Scoring" value={
+                Object.keys(exams).filter(e => exams[e].status === 'done').length
+              }
+              suffix={'/ ' + examiners}
             />
-          </Tooltip>
-        </Col>
-        <Col style={styles.verticalCenter} xs={10} lg={3}>
-          <Row gutter={[16, 20]}>
-            <Col xs={24}>
-              <Statistic title="All Examiner" value={examiners} />
-            </Col>
-            <Col span={10}>
-              <Statistic title="Pass" value={pass} />
-            </Col>
-            <Col span={10}>
-              <Statistic title="Fail" value={fail} />
-            </Col>
-          </Row>
-        </Col>
-        <Col style={styles.centerAll} xs={14} lg={5}>
-          <Tooltip>
-            <Progress
-              trailColor="#cacaca"
-              percent={Object.keys(exams).filter(e => exams[e].status === 'done').length / examiners * 100}
-              showInfo={false}
-            />
-          </Tooltip>
-        </Col>
-        <Col style={styles.verticalCenter} xs={10} lg={4}>
-          <Statistic title="Scoring" value={
-              Object.keys(exams).filter(e => exams[e].status === 'done').length
-            }
-            suffix={'/ ' + examiners}
-          />
-        </Col>
-      </Row>
+          </Col>
+        </Row>
 
-      <Collapse>
-        <Panel className="site-collapse-custom-collapse" header="See More Info">
-          <Row gutter={[16, 16]}>
-            {createExamList()}
-          </Row>
-        </Panel>
-      </Collapse>
-    </div>
-  )
+        <Collapse>
+          <Panel className="site-collapse-custom-collapse" header="See More Info">
+            <Row gutter={[16, 16]}>
+              {createExamList()}
+            </Row>
+          </Panel>
+        </Collapse>
+      </div>
+    )
+  }
 }
+
+QuizDetailScreen.propTypes = {
+  match: PropTypes.object
+}
+
+export default QuizDetailScreen
