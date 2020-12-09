@@ -20,7 +20,8 @@ const styles = {
   centerAll: {
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    flexDirection: 'column'
   },
   verticalCenter: {
     paddingLeft: 15,
@@ -57,6 +58,7 @@ class QuizDetailScreen extends React.Component {
       snapshot.forEach(s => {
         exams[s.id] = s.data()
       })
+      console.log(exams)
       this.setState({
         exams
       })
@@ -159,8 +161,6 @@ class QuizDetailScreen extends React.Component {
       }
     }
 
-    if (exams == null) return <Loading color="#1890ff" />
-
     const calculateMaxScore = () => {
       if (!quiz || !quiz.amount) return 'ไม่ระบุคะแนนเต็ม'
       return quiz.amount
@@ -210,6 +210,7 @@ class QuizDetailScreen extends React.Component {
         </Collapse>
       )
     }
+    if (exams == null) return <Loading color="#1890ff" />
 
     // calculate statistics
     let pass = 0
@@ -218,8 +219,8 @@ class QuizDetailScreen extends React.Component {
     const scoredExaminers = Object.keys(exams).filter(e => exams[e].status === 'done').length
 
     Object.values(exams).forEach(e => {
-      if (e.status === 'done' && e.score) {
-        const score = e.score
+      if (['done', 'error'].includes(e.status)) {
+        const score = (e.score || 0)
         if (!quiz.amount) {
           pass += 1
           return
@@ -227,6 +228,16 @@ class QuizDetailScreen extends React.Component {
         if (score >= quiz.amount / 2) pass += 1
         else fail += 1
       }
+    })
+
+    const passRate = (pass / examiners) * 100
+    const failRate = (fail / examiners) * 100
+
+    console.log({
+      pass,
+      fail,
+      examiners,
+      scoredExaminers
     })
 
     return (
@@ -249,15 +260,21 @@ class QuizDetailScreen extends React.Component {
           marginTop: 10,
           background: '#f7f7f7'
         }} gutter={[40, 20]}>
-          <Col style={styles.centerAll} xs={14} lg={4}>
+          <Col style={styles.centerAll} xs={14} lg={8}>
             <Tooltip>
               <Progress
-                percent={scoredExaminers / examiners * 100}
+                percent={passRate}
+                format={(percent) => (percent.toFixed(2) + '%')}
+                strokeColor="#52c41a"
+                trailColor="#cacaca"
+              />
+            </Tooltip>
+            <Tooltip>
+              <Progress
+                percent={failRate}
                 format={(percent) => (percent.toFixed(2) + '%')}
                 strokeColor="red"
                 trailColor="#cacaca"
-                success={{ percent: (pass / examiners) * 100 }}
-                type="circle"
               />
             </Tooltip>
           </Col>
@@ -278,15 +295,13 @@ class QuizDetailScreen extends React.Component {
             <Tooltip>
               <Progress
                 trailColor="#cacaca"
-                percent={Object.keys(exams).filter(e => exams[e].status === 'done').length / examiners * 100}
+                percent={scoredExaminers / examiners * 100}
                 showInfo={false}
               />
             </Tooltip>
           </Col>
           <Col style={styles.verticalCenter} xs={10} lg={4}>
-            <Statistic title="Scoring" value={
-                Object.keys(exams).filter(e => exams[e].status === 'done').length
-              }
+            <Statistic title="Scoring" value={ scoredExaminers }
               suffix={'/ ' + examiners}
             />
           </Col>
