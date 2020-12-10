@@ -373,17 +373,19 @@ export default class AddFormModal extends React.Component {
           return
         }
         await storageRef.form.put(pdfFile)
-        const urlBuffer = [
+        let urlBuffer = [
           storageRef.form.getDownloadURL(),
           storageRef.answer_sheet.getDownloadURL(),
           storageRef.student.getDownloadURL()
         ]
-        await Promise.all(urlBuffer)
+        urlBuffer = await Promise.all(urlBuffer)
+        console.log(urlBuffer)
         const url = {
           form: urlBuffer[0],
           answer_sheet: urlBuffer[1],
           student: urlBuffer[2]
         }
+        console.log(url)
         await this.formRef.set({
           name: formName,
           owner: user.uid,
