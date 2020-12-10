@@ -194,8 +194,8 @@ export default class QuizModal extends React.Component {
 
   async _stepChange (step, resend) {
     if (step === 3) {
-      this.props.toggleModal()
       this.setState(this.initialState)
+      this.props.toggleModal()
       return
     }
     this.setState({ step })
