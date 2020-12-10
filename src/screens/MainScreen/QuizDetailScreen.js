@@ -166,6 +166,9 @@ class QuizDetailScreen extends React.Component {
   render () {
     const { quizid } = this.props.match.params
     const { exams, quiz } = this.state
+    if (exams == null) return <Loading color="#1890ff" />
+    if (quiz == null) return <Loading color="#1890ff" />
+
     const props = {
       name: 'file',
       customRequest: this.upload,
@@ -210,7 +213,11 @@ class QuizDetailScreen extends React.Component {
                     {/* {exams[eid].filename} */}
                     <Col span={12}>
                       <Title style={{ margin: 0 }} level={4}>
-                        {exams[eid].sid || 'กำลังตรวจ'}
+                        {
+                          exams[eid].status === 'error'
+                            ? 'ไม่สามารถตรวจข้อสอบได้'
+                            : exams[eid].sid || 'กำลังตรวจ'
+                        }
                       </Title>
                     </Col>
                     <Col
@@ -241,6 +248,13 @@ class QuizDetailScreen extends React.Component {
                       <Button>See More</Button>
                     </Link>
                   </Col>
+                  {
+                    exams[eid].error_msg
+                      ? <Col span={24}>
+                          <Title level={5}>{exams[eid].error_msg}</Title>
+                        </Col>
+                      : null
+                  }
                 </Row>
               </Panel>
             )
@@ -248,7 +262,6 @@ class QuizDetailScreen extends React.Component {
         </Collapse>
       )
     }
-    if (exams == null) return <Loading color="#1890ff" />
 
     // calculate statistics
     let pass = 0
@@ -303,6 +316,21 @@ class QuizDetailScreen extends React.Component {
             Edit Solution
           </Button>
         </Link>
+        <Button
+          type="primary"
+          shape="round"
+          danger
+          onClick={async () => {
+            const db = firebase.firestore()
+            const buffer = Object.keys(exams).map(id => {
+              return db.collection('exams').doc(id).delete()
+            })
+            await Promise.all(buffer)
+            message.success('deleted all exams')
+          }}
+          size={50}>
+          Delete All Exam
+        </Button>
         <Dragger {...props}>
           <p className="ant-upload-drag-icon">
             <InboxOutlined />

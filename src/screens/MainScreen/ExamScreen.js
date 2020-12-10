@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Skeleton, Row, Col, Image, Typography, Table } from 'antd'
 import {
-  CheckCircleFilled,
-  CloseCircleFilled
-} from '@ant-design/icons'
+  Skeleton,
+  Input,
+  Row,
+  Col,
+  Image,
+  Typography,
+  Table
+} from 'antd'
+import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons'
+
 import firebase from 'firebase/app'
 import 'firebase/firestore'
 import 'firebase/storage'
@@ -20,7 +26,7 @@ export default function ExamScreen () {
 
   useEffect(() => {
     const db = firebase.firestore()
-    db.collection('exams')
+    const unsub = db.collection('exams')
       .doc(examid)
       .onSnapshot(async s => {
         if (!s.exists) setExam({})
@@ -38,7 +44,9 @@ export default function ExamScreen () {
         if (examInfo.status === 'done') {
           const storage = firebase.storage()
           const originalReference = storage.ref(
-            'exams/' + user.uid + '/' +
+            'exams/' +
+              user.uid +
+              '/' +
               qid +
               '/' +
               `${examid}_${examInfo.filename}`
@@ -51,6 +59,7 @@ export default function ExamScreen () {
           setResult(resultUrl)
         }
       })
+    return () => { unsub && unsub() }
   }, [])
 
   const img = () => {
@@ -59,6 +68,16 @@ export default function ExamScreen () {
     }
     return (
       <>
+        <Row>
+          <Col xs={12}>
+            <Input onChange={e => {
+              const db = firebase.firestore()
+              db.collection('exams').doc(examid).set({
+                sid: e.target.value
+              }, { merge: true })
+            }} value={exam.sid} placeholder="รหัสนักศึกษา" />
+          </Col>
+        </Row>
         <Row className="result-images">
           <Col xs={12}>
             <Title level={4}>Original Image :</Title>
@@ -79,11 +98,14 @@ export default function ExamScreen () {
           key: clause,
           clause,
           ...exam.result[clause],
-          correct: (exam.result[clause].correct
-            ? <CheckCircleFilled style={{ color: '#52c41a' }}/>
-            : <CloseCircleFilled style={{ color: '#ff4d4f' }}/>
-          ),
-          score: (exam.result[clause].correct ? 1 : 0)
+          correct: exam.result[clause].correct
+            ? (
+              <CheckCircleFilled style={{ color: '#52c41a' }} />
+              )
+            : (
+              <CloseCircleFilled style={{ color: '#ff4d4f' }} />
+              ),
+          score: exam.result[clause].correct ? 1 : 0
         }
       })
     : []
@@ -116,23 +138,31 @@ export default function ExamScreen () {
     }
   ]
 
-  return <div>
-    {exam === null
-      ? (
-        <Skeleton paragraph={false} active />
-        )
-      : <>
+  return (
+    <div>
+      {exam === null
+        ? (
+          <Skeleton paragraph={false} active />
+          )
+        : (
+        <>
           {img()}
-          <Table pagination={{
-            hideOnSinglePage: true
-          }} footer={() => {
-            let sum = 0
-            dataSource.forEach(clause => {
-              sum += clause.score
-            })
-            return `คะแนนรวม ${sum}`
-          }} dataSource={dataSource} columns={columns} />
+          <Table
+            pagination={{
+              hideOnSinglePage: true
+            }}
+            footer={() => {
+              let sum = 0
+              dataSource.forEach(clause => {
+                sum += clause.score
+              })
+              return `คะแนนรวม ${sum}`
+            }}
+            dataSource={dataSource}
+            columns={columns}
+          />
         </>
-    }
-  </div>
+          )}
+    </div>
+  )
 }
