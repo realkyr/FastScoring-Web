@@ -83,7 +83,7 @@ export default class AddFormModal extends React.Component {
   }
 
   _stepContent () {
-    const { step } = this.state
+    const { step, column } = this.state
     switch (step) {
       case 0:
         return (
@@ -106,6 +106,7 @@ export default class AddFormModal extends React.Component {
                 <Select
                   style={{ width: '100%' }}
                   onSelect={column => this.setState({ column })}
+                  value={column}
                   defaultValue="1">
                   <Option value={1}>1</Option>
                   <Option value={2}>2</Option>
@@ -372,10 +373,16 @@ export default class AddFormModal extends React.Component {
           return
         }
         await storageRef.form.put(pdfFile)
+        const urlBuffer = [
+          storageRef.form.getDownloadURL(),
+          storageRef.answer_sheet.getDownloadURL(),
+          storageRef.student.getDownloadURL()
+        ]
+        await Promise.all(urlBuffer)
         const url = {
-          form: await storageRef.form.getDownloadURL(),
-          answer_sheet: await storageRef.answer_sheet.getDownloadURL(),
-          student: await storageRef.student.getDownloadURL()
+          form: urlBuffer[0],
+          answer_sheet: urlBuffer[1],
+          student: urlBuffer[2]
         }
         await this.formRef.set({
           name: formName,
@@ -384,8 +391,8 @@ export default class AddFormModal extends React.Component {
           url
         }, { merge: true })
         message.success('Upload Form successful')
-        this.props.toggleModal()
         this.setState(this.initialState)
+        this.props.toggleModal()
         break
       }
       default:
