@@ -5,7 +5,20 @@ import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
 import Loading from '../Loading'
 
-import { Collapse, Button, Upload, message, Row, Col, Skeleton, Tooltip, Progress, Statistic, Typography } from 'antd'
+import {
+  Collapse,
+  Alert,
+  Button,
+  Upload,
+  message,
+  Row,
+  Col,
+  Skeleton,
+  Tooltip,
+  Progress,
+  Statistic,
+  Typography
+} from 'antd'
 import { InboxOutlined, EditOutlined } from '@ant-design/icons'
 
 import firebase from 'firebase/app'
@@ -42,14 +55,23 @@ class QuizDetailScreen extends React.Component {
     this.upload = this.upload.bind(this)
   }
 
-  async componentDidMount () {
+  componentDidMount () {
     const { quizid } = this.props.match.params
     const db = firebase.firestore()
-    const ref = db.collection('exams').where('quiz', '==', db.collection('quizzes').doc(quizid))
+    const ref = db
+      .collection('exams')
+      .where('quiz', '==', db.collection('quizzes').doc(quizid))
     const qref = db.collection('quizzes').doc(quizid)
-    const qdocs = await qref.get()
-    this.setState({
-      quiz: qdocs.data()
+    this.quiz_unsub = qref.onSnapshot(q => {
+      this.form_unsub = q.data().form.onSnapshot(f => {
+        this.setState({
+          form_exists: f.exists
+        })
+      })
+
+      this.setState({
+        quiz: q.data()
+      })
     })
 
     // add listener
@@ -67,6 +89,8 @@ class QuizDetailScreen extends React.Component {
 
   componentWillUnmount () {
     this.unsub && this.unsub()
+    this.quiz_unsub && this.quiz_unsub()
+    this.form_unsub && this.form_unsub()
   }
 
   async upload ({ file, onProgress, onSuccess, onError }) {
@@ -177,36 +201,50 @@ class QuizDetailScreen extends React.Component {
       }
       return (
         <Collapse className="exams-result">
-          {
-            Object.keys(exams).map(eid => {
-              return (
-                <Panel key={eid} header={
+          {Object.keys(exams).map(eid => {
+            return (
+              <Panel
+                key={eid}
+                header={
                   <Row justify="space-between">
                     {/* {exams[eid].filename} */}
-                    <Col span={12}><Title style={{ margin: 0 }} level={4}>{exams[eid].sid || 'กำลังตรวจ'}</Title></Col>
-                    <Col style={{
-                      display: 'flex',
-                      justifyContent: 'flex-end'
-                    }} span={4}>
-                      <Statistic title="Scoring" value={exams[eid].score} suffix={`/ ${calculateMaxScore()}`} />
+                    <Col span={12}>
+                      <Title style={{ margin: 0 }} level={4}>
+                        {exams[eid].sid || 'กำลังตรวจ'}
+                      </Title>
+                    </Col>
+                    <Col
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end'
+                      }}
+                      span={4}>
+                      <Statistic
+                        title="Scoring"
+                        value={exams[eid].score}
+                        suffix={`/ ${calculateMaxScore()}`}
+                      />
                     </Col>
                   </Row>
                 }>
-                  <Row justify="space-between">
-                    <Col span={12}><Title level={5}>status: {exams[eid].status}</Title></Col>
-                    <Col style={{
+                <Row justify="space-between">
+                  <Col span={12}>
+                    <Title level={5}>status: {exams[eid].status}</Title>
+                  </Col>
+                  <Col
+                    style={{
                       display: 'flex',
                       justifyContent: 'flex-end'
-                    }} span={12}>
-                      <Link to={'/quiz/exam/' + eid}>
-                        <Button>See More</Button>
-                      </Link>
-                    </Col>
-                  </Row>
-                </Panel>
-              )
-            })
-          }
+                    }}
+                    span={12}>
+                    <Link to={'/quiz/exam/' + eid}>
+                      <Button>See More</Button>
+                    </Link>
+                  </Col>
+                </Row>
+              </Panel>
+            )
+          })}
         </Collapse>
       )
     }
@@ -216,11 +254,13 @@ class QuizDetailScreen extends React.Component {
     let pass = 0
     let fail = 0
     const examiners = Object.keys(exams).length
-    const scoredExaminers = Object.keys(exams).filter(e => exams[e].status === 'done').length
+    const scoredExaminers = Object.keys(exams).filter(
+      e => exams[e].status === 'done'
+    ).length
 
     Object.values(exams).forEach(e => {
       if (['done', 'error'].includes(e.status)) {
-        const score = (e.score || 0)
+        const score = e.score || 0
         if (!quiz.amount) {
           pass += 1
           return
@@ -242,8 +282,24 @@ class QuizDetailScreen extends React.Component {
 
     return (
       <div style={{ textAlign: 'left' }}>
+        {
+          this.state.form_exists === false
+            ? <Alert
+              message="Error: มีบางอย่างต้องแก้ไข"
+              description="ค้นหาฟอร์มไม่เจอ ระบบจะไม่สามารถตรวจข้อสอบได้
+                ฟอร์มอาจถูกลบไป กรุณาเลือกฟอร์ม
+                หรือสร้างฟอร์มใหม่"
+              type="error"
+              showIcon
+            />
+            : null
+        }
         <Link to={`/quiz/${quizid}/solution`}>
-          <Button type="primary" shape="round" icon={<EditOutlined />} size={50}>
+          <Button
+            type="primary"
+            shape="round"
+            icon={<EditOutlined />}
+            size={50}>
             Edit Solution
           </Button>
         </Link>
@@ -254,17 +310,21 @@ class QuizDetailScreen extends React.Component {
           <p className="ant-upload-text">
             Click or drag file to this area to upload
           </p>
-          <p className="ant-upload-hint">drop files to score your answer sheet</p>
+          <p className="ant-upload-hint">
+            drop files to score your answer sheet
+          </p>
         </Dragger>
-        <Row style={{
-          marginTop: 10,
-          background: '#f7f7f7'
-        }} gutter={[40, 20]}>
+        <Row
+          style={{
+            marginTop: 10,
+            background: '#f7f7f7'
+          }}
+          gutter={[40, 20]}>
           <Col style={styles.centerAll} xs={14} lg={8}>
             <Tooltip>
               <Progress
                 percent={passRate}
-                format={(percent) => (percent.toFixed(2) + '%')}
+                format={percent => percent.toFixed(2) + '%'}
                 strokeColor="#52c41a"
                 trailColor="#cacaca"
               />
@@ -272,7 +332,7 @@ class QuizDetailScreen extends React.Component {
             <Tooltip>
               <Progress
                 percent={failRate}
-                format={(percent) => (percent.toFixed(2) + '%')}
+                format={percent => percent.toFixed(2) + '%'}
                 strokeColor="red"
                 trailColor="#cacaca"
               />
@@ -295,23 +355,25 @@ class QuizDetailScreen extends React.Component {
             <Tooltip>
               <Progress
                 trailColor="#cacaca"
-                percent={scoredExaminers / examiners * 100}
+                percent={(scoredExaminers / examiners) * 100}
                 showInfo={false}
               />
             </Tooltip>
           </Col>
           <Col style={styles.verticalCenter} xs={10} lg={4}>
-            <Statistic title="Scoring" value={ scoredExaminers }
+            <Statistic
+              title="Scoring"
+              value={scoredExaminers}
               suffix={'/ ' + examiners}
             />
           </Col>
         </Row>
 
         <Collapse>
-          <Panel className="site-collapse-custom-collapse" header="See More Info">
-            <Row gutter={[16, 16]}>
-              {createExamList()}
-            </Row>
+          <Panel
+            className="site-collapse-custom-collapse"
+            header="See More Info">
+            <Row gutter={[16, 16]}>{createExamList()}</Row>
           </Panel>
         </Collapse>
       </div>

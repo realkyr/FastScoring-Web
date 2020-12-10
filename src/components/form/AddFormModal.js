@@ -314,6 +314,10 @@ export default class AddFormModal extends React.Component {
     })
   }
 
+  componentWillUnmount () {
+    this.unsub && this.unsub()
+  }
+
   async _stepChange (step, resend) {
     const canvas = document.getElementById('pdf')
     if (canvas) {

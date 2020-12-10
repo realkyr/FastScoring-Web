@@ -1,5 +1,6 @@
 import React from 'react'
 import { Button, Row, Col, Typography, Skeleton, Image } from 'antd'
+import { Link } from 'react-router-dom'
 import { PlusOutlined } from '@ant-design/icons'
 
 import AddFormModal from '../../components/form/AddFormModal'
@@ -71,25 +72,26 @@ export default class FormScreen extends React.Component {
     return [...Object.keys(forms).map(fid => {
       return (
           <Col key={fid} xs={24} md={12} lg={6}>
-            {/* <Link to={'/form/' + fid}> */}
-            <div
-              style={{
-                borderRadius: '5px',
-                boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
-                cursor: 'pointer',
-                background: 'white',
-                width: '100%',
-                overflow: 'hidden',
-                height: 280
-              }}>
-              <div style={{ overflow: 'hidden', height: 200 }}>
-                <Image preview={false} src={forms[fid].url.answer_sheet} />
+            <Link to={'/form/' + fid}>
+              <div
+                style={{
+                  borderRadius: '5px',
+                  boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+                  cursor: 'pointer',
+                  background: 'white',
+                  width: '100%',
+                  overflow: 'hidden',
+                  height: 280
+                }}>
+                <div style={{ overflow: 'hidden', height: 200 }}>
+                  <Image preview={false} src={forms[fid].url.answer_sheet} />
+                </div>
+                <div style={{ height: 80 }}>
+                  <Title level={3}>{forms[fid].name}</Title>
+                  <Paragraph ellipsis>{forms[fid].description || 'lorem ipsum'}</Paragraph>
+                </div>
               </div>
-              <div style={{ height: 80 }}>
-                <Title level={3}>{forms[fid].name}</Title>
-                <Paragraph ellipsis>{forms[fid].description || 'lorem ipsum'}</Paragraph>
-              </div>
-            </div>
+            </Link>
           </Col>
       )
     }),

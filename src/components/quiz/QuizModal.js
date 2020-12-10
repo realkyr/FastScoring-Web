@@ -208,7 +208,7 @@ export default class QuizModal extends React.Component {
     return (
       <Modal
         visible={visible}
-        title="Add Form"
+        title="Add Quiz"
         // onOk={this.handleOk}
         onCancel={toggleModal}
         footer={[

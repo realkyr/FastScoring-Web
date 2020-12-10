@@ -10,14 +10,14 @@ const ROOT_PATH = '/'
 
 const HOME_ROUTE = [
   {
-    name: 'Form',
-    path: ROOT_PATH + 'form',
-    component: Form
-  },
-  {
     name: 'Form Detail',
     path: ROOT_PATH + 'form/:id',
     component: FormDetail
+  },
+  {
+    name: 'Form',
+    path: ROOT_PATH + 'form',
+    component: Form
   },
   {
     name: 'Exam',
