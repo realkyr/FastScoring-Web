@@ -187,7 +187,7 @@ const RootRouter = () => {
             {HOME_ROUTE.map(r => (
               <Route key={r.name} path={r.path} component={r.component} />
             ))}
-            <Redirect from="/" to={HOME_ROUTE[0].path} />
+            <Redirect from="/" to={HOME_ROUTE[1].path} />
           </Switch>
         </Content>
         <Footer>
