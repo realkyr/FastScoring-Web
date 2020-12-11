@@ -16,6 +16,8 @@ import {
 } from 'antd'
 import { UploadOutlined, LoadingOutlined } from '@ant-design/icons'
 import firebase from 'firebase/app'
+import 'firebase/auth'
+import 'firebase/firestore'
 import 'firebase/storage'
 
 const pdfjsLib = require('pdfjs-dist/es5/build/pdf.js')
@@ -27,39 +29,94 @@ const { Text } = Typography
 const { Step } = Steps
 const { Option } = Select
 
-export default class AddFormModal extends React.Component {
+export default class FormModal extends React.Component {
   constructor (props) {
     super(props)
+
+    const url = props.edit ? props.form.url || {} : {}
+
+    // if edit form there is form information supply for modal
+    this.initialState = props.form
+      ? {
+          column: props.form.column,
+          amount: props.form.amount,
+          answerResult: url.answersheet || null,
+          studentResult: url.student || null,
+          ansMessage: props.form.error_ans_msg || null,
+          stuMessage: props.form.error_stu_msg || null,
+          formName: props.form.name || null
+        }
+      : {
+          column: 1,
+          amount: 20,
+          ansMessage: null,
+          answerResult: null,
+          stuMessage: null,
+          studentResult: null
+        }
     this.initialState = {
+      ...this.initialState,
+      url,
+      answerSheetJPG: null,
       step: 0,
       pdfFileImg: null,
       isPDFRendered: false,
       isTasking: false,
       isLoading: false,
       cropper: null,
-      answerSheetJPG: null,
-      column: 1,
-      amount: 20,
-      stepStatus: 'process',
-      ansMessage: null,
-      answerResult: null,
-      stuMessage: null,
-      stuResult: null
+      stepStatus: 'process'
     }
     this.state = this.initialState
+
+    // form ref if id supply reference to exist
     const db = firebase.firestore()
-    this.formRef = db.collection('forms').doc()
+    this._firstTimeMount = false
+    this.formRef = !props.id
+      ? db.collection('forms').doc()
+      : db.collection('forms').doc(props.id)
     this._selectPDF = this._selectPDF.bind(this)
     this._stepContent = this._stepContent.bind(this)
     this._send = this._send.bind(this)
+    this._uploadStorage = this._uploadStorage.bind(this)
   }
 
-  async _selectPDF ({ file }) {
+  async _convertURLtoFile (props) {
     this.setState({
-      isTasking: !this.state.isTasking,
+      isLoading: true
+    })
+    // if edit form
+    if (props.edit) {
+      const auth = firebase.auth()
+      const user = auth.currentUser
+      const ref = firebase.storage().ref()
+      try {
+        console.log(`forms/${user.uid}/${props.id}_form.pdf`)
+        const url = await ref.child(`forms/${user.uid}/${props.id}_form.pdf`).getDownloadURL()
+        this._selectPDF({ file: url, upload: false })
+      } catch (error) {
+        message.error(error.message)
+        message.error('กรุณาเลือกไฟล์ PDF ใหม่อีกครั้ง')
+      }
+    }
+  }
+
+  async _selectPDF ({ file, upload }) {
+    // pdf file select and store in state
+    this.setState({
+      isLoading: true,
       pdfFile: file
     })
-    const task = pdfjsLib.getDocument(URL.createObjectURL(file))
+    if (upload) {
+      // upload file only when upload is true
+      await this._uploadStorage({
+        type: 'form',
+        tag: 'pdf',
+        file: file,
+        isURL: false
+      })
+    }
+
+    const task = pdfjsLib.getDocument(typeof file === 'string' ? file : URL.createObjectURL(file))
     const pdf = await task.promise
     const page = await pdf.getPage(1)
     const scale = 2
@@ -76,7 +133,7 @@ export default class AddFormModal extends React.Component {
     }
     await page.render(renderContext).promise
     this.setState({
-      isTasking: !this.state.isTasking,
+      isLoading: false,
       isPDFRendered: true
     })
     message.success('load PDF สำเร็จ')
@@ -90,7 +147,10 @@ export default class AddFormModal extends React.Component {
           <>
             <Row gutter={[16, 16]}>
               <Col xs={24}>
-                <Upload showUploadList={false} customRequest={this._selectPDF}>
+                <Upload
+                  showUploadList={false}
+                  customRequest={e => this._selectPDF({ file: e.file, upload: true })}
+                >
                   <Button icon={<UploadOutlined />}>เลือกไฟล์ PDF</Button>
                 </Upload>
               </Col>
@@ -162,7 +222,7 @@ export default class AddFormModal extends React.Component {
               }} xs={24} md={12}>
                   <canvas
                     style={{
-                      width: '20%'
+                      width: '50%'
                     }}
                     id="pdf"
                   />
@@ -222,6 +282,10 @@ export default class AddFormModal extends React.Component {
   }
 
   async _send () {
+    this.setState({
+      stepStatus: 'process',
+      isLoading: true
+    })
     const { cropper, step } = this.state
 
     const storage = firebase.storage()
@@ -261,9 +325,6 @@ export default class AddFormModal extends React.Component {
       [sheet.path]: `/forms/${user.uid}/${this.formRef.id}_${sheet.type}.png`
     }
 
-    const storageRef = storage.ref(
-      `/forms/${user.uid}/${this.formRef.id}_${sheet.type}.png`
-    )
     this.unsub && this.unsub()
     this.setState({
       [sheet.pic]: cropper.getCroppedCanvas().toDataURL()
@@ -272,10 +333,12 @@ export default class AddFormModal extends React.Component {
       sheet.payload,
       { merge: true }
     )
-    storageRef.putString(
-      cropper.getCroppedCanvas().toDataURL(),
-      'data_url'
-    )
+    this._uploadStorage({
+      type: sheet.type,
+      tag: 'png',
+      file: cropper.getCroppedCanvas().toDataURL(),
+      isURL: true
+    })
     this.unsub = this.formRef.onSnapshot(async s => {
       const info = s.data()
       switch (info[sheet.status]) {
@@ -314,6 +377,27 @@ export default class AddFormModal extends React.Component {
     })
   }
 
+  async _uploadStorage ({ type, tag, file, isURL }) {
+    const storage = firebase.storage()
+    const user = firebase.auth().currentUser
+    const storageRef = storage
+      .ref(`/forms/${user.uid}/`)
+      .child(`${this.formRef.id}_${type}.${tag}`)
+    if (isURL) await storageRef.putString(file, 'data_url')
+    else await storageRef.put(file)
+    const url = await storageRef.getDownloadURL()
+    this.setState({
+      url: {
+        ...this.state.url,
+        [type]: url
+      }
+    })
+    await this.formRef.set({
+      url: this.state.url,
+      owner: user.uid
+    }, { merge: true })
+  }
+
   componentWillUnmount () {
     this.unsub && this.unsub()
   }
@@ -325,15 +409,13 @@ export default class AddFormModal extends React.Component {
         pdfFileImg: canvas.toDataURL('image/jpeg')
       })
     }
-    const storage = firebase.storage()
-
     switch (step) {
       case 0:
         this.setState({
           step
         }, () => {
           // if pdf file selected load one
-          if (this.state.pdfFile) this._selectPDF({ file: this.state.pdfFile })
+          if (this.state.pdfFile) this._selectPDF({ file: this.state.pdfFile, upload: false })
         })
         break
       case 1:
@@ -348,61 +430,40 @@ export default class AddFormModal extends React.Component {
         )
         break
       case 4: {
-        const { pdfFile, formName } = this.state
+        const { formName } = this.state
         const user = firebase.auth().currentUser
 
         this.setState({ isLoading: true })
 
-        // create all reference
-        const storageRef = {
-          form: storage
-            .ref(`/forms/${user.uid}/`)
-            .child(`${this.formRef.id}_form.pdf`),
-          answer_sheet: storage
-            .ref(`/forms/${user.uid}/`)
-            .child(`${this.formRef.id}_answersheet.png`),
-          student: storage
-            .ref(`/forms/${user.uid}/`)
-            .child(`${this.formRef.id}_student.png`)
-        }
-
-        if (!pdfFile) {
-          message.error('No PDF Selected')
-          this.setState({ isLoading: false })
-          return
-        }
         if (!formName) {
           message.error('please insert form name')
           this.setState({ isLoading: false })
           return
         }
-        await storageRef.form.put(pdfFile)
-        let urlBuffer = [
-          storageRef.form.getDownloadURL(),
-          storageRef.answer_sheet.getDownloadURL(),
-          storageRef.student.getDownloadURL()
-        ]
-        urlBuffer = await Promise.all(urlBuffer)
-        console.log(urlBuffer)
-        const url = {
-          form: urlBuffer[0],
-          answer_sheet: urlBuffer[1],
-          student: urlBuffer[2]
-        }
-        console.log(url)
         await this.formRef.set({
           name: formName,
-          owner: user.uid,
-          available: true,
-          url
+          owner: user.uid
         }, { merge: true })
-        message.success('Upload Form successful')
+        message.success(this.props.modalName + ' successful')
+        this._firstTimeMount = false
         this.setState(this.initialState)
         this.props.toggleModal()
         break
       }
       default:
         break
+    }
+  }
+
+  componentDidUpdate (prevProps) {
+    if (
+      this.props.edit &&
+        this.props.visible &&
+        this._firstTimeMount === false
+    ) {
+      if (!this._firstTimeMount) this._firstTimeMount = true
+      //  if first time mount load pdf
+      this._convertURLtoFile(this.props)
     }
   }
 
@@ -416,7 +477,7 @@ export default class AddFormModal extends React.Component {
           top: '50px'
         }}
         visible={visible}
-        title="Add Form"
+        title={this.props.modalName}
         // onOk={this.handleOk}
         onCancel={toggleModal}
         footer={[
@@ -435,7 +496,13 @@ export default class AddFormModal extends React.Component {
             onClick={this._send}
           >ส่ง</Button>,
           <Button
-            disabled={this.state.isLoading || ([1, 2].includes(this.state.step) && this.state.stepStatus !== 'finish')}
+            disabled={
+              this.state.isLoading ||
+              !this.state.isPDFRendered ||
+                (
+                  [1, 2].includes(this.state.step) &&
+                  (this.state.stepStatus !== 'finish' && !this.props.edit)
+                )}
             onClick={() => this._stepChange(this.state.step + 1)}
             type="primary"
             key="next">
@@ -451,7 +518,13 @@ export default class AddFormModal extends React.Component {
           top: 0
         }}>
           <Steps size="small" status={this.state.stepStatus} current={step}>
-            <Step title="เลือก PDF" />
+            <Step title="เลือก PDF" icon={
+                this.state.isLoading && this.state.step === 0
+                  ? (
+                      <LoadingOutlined />
+                    )
+                  : null
+              }/>
             <Step
               title="Crop ส่วนที่ฝนคำตอบ"
               description={this.state.ansMessage}
@@ -495,7 +568,11 @@ export default class AddFormModal extends React.Component {
   }
 }
 
-AddFormModal.propTypes = {
+FormModal.propTypes = {
   visible: PropTypes.bool,
-  toggleModal: PropTypes.func
+  toggleModal: PropTypes.func,
+  modalName: PropTypes.string.isRequired,
+  form: PropTypes.object,
+  edit: PropTypes.bool,
+  id: PropTypes.string
 }
