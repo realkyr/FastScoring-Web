@@ -116,27 +116,34 @@ export default class FormModal extends React.Component {
       })
     }
 
-    const task = pdfjsLib.getDocument(typeof file === 'string' ? file : URL.createObjectURL(file))
-    const pdf = await task.promise
-    const page = await pdf.getPage(1)
-    const scale = 2
-    const viewport = page.getViewport({ scale: scale })
+    try {
+      const task = pdfjsLib.getDocument(typeof file === 'string' ? file : URL.createObjectURL(file))
+      const pdf = await task.promise
+      const page = await pdf.getPage(1)
+      const scale = 2
+      const viewport = page.getViewport({ scale: scale })
 
-    const canvas = document.getElementById('pdf')
-    const context = canvas.getContext('2d')
-    canvas.height = viewport.height
-    canvas.width = viewport.width
+      const canvas = document.getElementById('pdf')
+      const context = canvas.getContext('2d')
+      canvas.height = viewport.height
+      canvas.width = viewport.width
 
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      }
+      await page.render(renderContext).promise
+      this.setState({
+        isLoading: false,
+        isPDFRendered: true
+      })
+      message.success('load PDF สำเร็จ')
+    } catch (error) {
+      this.setState({
+        isLoading: false
+      })
+      message.error('load PDF ไม่สำเร็จ')
     }
-    await page.render(renderContext).promise
-    this.setState({
-      isLoading: false,
-      isPDFRendered: true
-    })
-    message.success('load PDF สำเร็จ')
   }
 
   _stepContent () {
