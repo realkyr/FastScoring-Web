@@ -3,7 +3,7 @@ import { Button, Row, Col, Typography, Skeleton, Image } from 'antd'
 import { Link } from 'react-router-dom'
 import { PlusOutlined } from '@ant-design/icons'
 
-import AddFormModal from '../../components/form/AddFormModal'
+import AddFormModal from '../../components/form/FormModal'
 
 import firebase from 'firebase/app'
 import 'firebase/firestore'
@@ -31,7 +31,8 @@ export default class FormScreen extends React.Component {
     const ref = db.collection('forms')
 
     // listen for form update
-    this.unsub = ref.where('available', '==', true).where('owner', '==', user.uid).onSnapshot(snapshots => {
+    this.unsub = ref.where('owner', '==', user.uid).onSnapshot(snapshots => {
+      console.log('listener init')
       const forms = { ...this.state.forms }
       snapshots.docChanges().forEach(change => {
         if (change.type === 'removed') {
@@ -52,7 +53,8 @@ export default class FormScreen extends React.Component {
 
   _createformsList () {
     const { forms } = this.state
-    if (forms == null) {
+    console.log(forms)
+    if (forms === null) {
       return (
         <Col xs={24}>
           <div
@@ -70,6 +72,7 @@ export default class FormScreen extends React.Component {
       )
     }
     return [...Object.keys(forms).map(fid => {
+      const url = forms[fid].url || {}
       return (
           <Col key={fid} xs={24} md={12} lg={6}>
             <Link to={'/form/' + fid}>
@@ -84,11 +87,13 @@ export default class FormScreen extends React.Component {
                   height: 280
                 }}>
                 <div style={{ overflow: 'hidden', height: 200 }}>
-                  <Image preview={false} src={forms[fid].url.answer_sheet} />
+                  <Image preview={false} src={
+                    url.answersheet || require('../../assets/img/form placeholder.jpg').default
+                  } />
                 </div>
                 <div style={{ height: 80 }}>
-                  <Title level={3}>{forms[fid].name}</Title>
-                  <Paragraph ellipsis>{forms[fid].description || 'lorem ipsum'}</Paragraph>
+                  <Title level={3}>{forms[fid].name || 'กระดาษคำตอบที่ยังไม่มีชื่อ'}</Title>
+                  <Paragraph ellipsis>{forms[fid].description || ''}</Paragraph>
                 </div>
               </div>
             </Link>
@@ -127,7 +132,7 @@ export default class FormScreen extends React.Component {
     return (
       <>
         <Row gutter={[16, 16]}>{this._createformsList()}</Row>
-        <AddFormModal visible={modalVisible} toggleModal={this.toggleModal} />
+        <AddFormModal modalName="Add Form" visible={modalVisible} toggleModal={this.toggleModal} />
       </>
     )
   }
