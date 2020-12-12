@@ -63,15 +63,22 @@ class QuizDetailScreen extends React.Component {
       .where('quiz', '==', db.collection('quizzes').doc(quizid))
     const qref = db.collection('quizzes').doc(quizid)
     this.quiz_unsub = qref.onSnapshot(q => {
-      this.form_unsub = q.data().form.onSnapshot(f => {
-        this.setState({
-          form_exists: f.exists
+      if (q.exists) {
+        this.form_unsub && this.form_unsub()
+        this.form_unsub = q.data().form.onSnapshot(f => {
+          this.setState({
+            form_exists: f.exists
+          })
         })
-      })
-
-      this.setState({
-        quiz: q.data()
-      })
+        this.setState({
+          quiz: q.data()
+        })
+      } else {
+        this.setState({
+          quiz: undefined,
+          exams: undefined
+        })
+      }
     })
 
     // add listener
@@ -166,6 +173,11 @@ class QuizDetailScreen extends React.Component {
   render () {
     const { quizid } = this.props.match.params
     const { exams, quiz } = this.state
+    if (!quiz && quiz !== null) {
+      return (
+        <Title level={1}>404 Not Found!</Title>
+      )
+    }
     if (exams == null) return <Loading color="#1890ff" />
     if (quiz == null) return <Loading color="#1890ff" />
 
@@ -247,6 +259,20 @@ class QuizDetailScreen extends React.Component {
                     <Link to={'/quiz/exam/' + eid}>
                       <Button>See More</Button>
                     </Link>
+                  </Col>
+                  <Col span={24}>
+                    <Button
+                      type="primary"
+                      shape="round"
+                      danger
+                      onClick={async () => {
+                        const db = firebase.firestore()
+                        await db.collection('exams').doc(eid).delete()
+                        message.success('deleted exams sucess')
+                      }}
+                      size={50}>
+                      Delete
+                    </Button>
                   </Col>
                   {
                     exams[eid].error_msg
@@ -330,6 +356,23 @@ class QuizDetailScreen extends React.Component {
           }}
           size={50}>
           Delete All Exam
+        </Button>
+        <Button
+          type="primary"
+          shape="round"
+          danger
+          onClick={async () => {
+            const db = firebase.firestore()
+            const buffer = [...Object.keys(exams).map(id => {
+              return db.collection('exams').doc(id).delete()
+            }),
+            db.collection('quizzes').doc(quizid).delete()
+            ]
+            await Promise.all(buffer)
+            message.success('deleted quiz success')
+          }}
+          size={50}>
+          Delete Quiz
         </Button>
         <Dragger {...props}>
           <p className="ant-upload-drag-icon">

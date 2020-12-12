@@ -86,7 +86,7 @@ export default function FormDetailScreen (props) {
       }
       <Title level={1}>
         {
-          form === null ? <Skeleton paragraph={false} active /> : form.name
+          form === null ? <Skeleton paragraph={false} active /> : form.name || 'ฟอร์มที่ยังไม่มีชื่อ'
         }
       </Title>
       <Row justify="space-between">
