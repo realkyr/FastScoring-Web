@@ -453,8 +453,9 @@ export default class FormModal extends React.Component {
         }, { merge: true })
         message.success(this.props.modalName + ' successful')
         this._firstTimeMount = false
-        this.setState(this.initialState)
-        this.props.toggleModal()
+        this.setState({
+          ...this.initialState
+        }, this.props.toggleModal)
         break
       }
       default:
