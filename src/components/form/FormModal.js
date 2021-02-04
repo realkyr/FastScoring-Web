@@ -332,6 +332,15 @@ export default class FormModal extends React.Component {
     }
 
     this.unsub && this.unsub()
+    if (sheet.type === 'answersheet') {
+      await this._uploadStorage({
+        type: 'form',
+        tag: 'jpg',
+        file: this.state.pdfFileImg,
+        isURL: true
+      })
+    }
+    console.log(this.formRef.id)
     this.setState({
       [sheet.pic]: cropper.getCroppedCanvas().toDataURL()
     })
