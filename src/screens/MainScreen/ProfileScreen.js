@@ -62,7 +62,8 @@ export default function ProfileScreen () {
       const db = firebase.firestore()
       const ref = db.collection('users').doc(user.uid)
       await ref.set({
-        picture_profile: `profile/${user.uid}/profile.png`
+        picture_profile: `profile/${user.uid}/profile.png`,
+        updated_time: new Date()
       }, { merge: true })
       const url = await storageRef.getDownloadURL()
       setAvatar(url)
@@ -117,7 +118,8 @@ export default function ProfileScreen () {
         .doc(uid)
         .set({
           fname,
-          lname
+          lname,
+          updated_time: new Date()
         }, { merge: true })
       message.success('บันทึกสำเร็จ')
     } catch (error) {

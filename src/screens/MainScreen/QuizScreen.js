@@ -49,6 +49,13 @@ export default class Quizcreen extends React.Component {
       this.setState({ quizzes })
     })
 
+    // listen to standard
+    this.unsub_std_form = db.collection('forms').doc('hl1xtxWD7QzZYpTr7yWA').onSnapshot(std => {
+      const forms = { ...this.state.forms }
+      forms[std.id] = std.data()
+      this.setState({ forms })
+    })
+
     // ----- listen to forms update
     this.form_unsub = ref.forms.onSnapshot(snapshots => {
       const forms = { ...this.state.forms }
@@ -68,6 +75,7 @@ export default class Quizcreen extends React.Component {
   componentWillUnmount () {
     this.unsub && this.unsub()
     this.form_unsub && this.form_unsub()
+    this.unsub_std_form && this.unsub_std_form()
   }
 
   _createQuizzesList () {
@@ -93,33 +101,8 @@ export default class Quizcreen extends React.Component {
         </Col>
       )
     }
-    return [...Object.keys(quizzes).map(qid => {
-      return (
-          <Col key={qid} xs={24} md={12} lg={6}>
-            <Link to={'/quiz/' + qid}>
-              <div
-                style={{
-                  borderRadius: '5px',
-                  boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
-                  cursor: 'pointer',
-                  background: 'white',
-                  width: '100%',
-                  overflow: 'hidden',
-                  height: 280
-                }}>
-                <div style={{ overflow: 'hidden', height: 200 }}>
-                  <Image width="100%" preview={false} src={require('../../assets/img/quiz placeholder.jpg').default} />
-                </div>
-                <div style={{ height: 80 }}>
-                  <Title level={3}>{quizzes[qid].name}</Title>
-                  <Paragraph ellipsis>{quizzes[qid].description || 'lorem ipsum'}</Paragraph>
-                </div>
-              </div>
-          </Link>
-          </Col>
-      )
-    }),
-    <Col key="add-quiz-button" xs={24} md={12} lg={6}>
+    return [
+      <Col key="add-quiz-button" xs={24} md={12} lg={6}>
         <div
           onClick={this.toggleModal}
           style={{
@@ -142,7 +125,33 @@ export default class Quizcreen extends React.Component {
             icon={<PlusOutlined />}
           />
         </div>
-    </Col>
+    </Col>,
+      ...Object.keys(quizzes).map(qid => {
+        return (
+          <Col key={qid} xs={24} md={12} lg={6}>
+            <Link to={'/quiz/' + qid}>
+              <div
+                style={{
+                  borderRadius: '5px',
+                  boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+                  cursor: 'pointer',
+                  background: 'white',
+                  width: '100%',
+                  overflow: 'hidden',
+                  height: 280
+                }}>
+                <div style={{ overflow: 'hidden', height: 200 }}>
+                  <Image width="100%" preview={false} src={require('../../assets/img/quiz placeholder.jpg').default} />
+                </div>
+                <div style={{ height: 80 }}>
+                  <Title level={3}>{quizzes[qid].name}</Title>
+                  <Paragraph ellipsis>{quizzes[qid].description || 'lorem ipsum'}</Paragraph>
+                </div>
+              </div>
+          </Link>
+          </Col>
+        )
+      })
     ]
   }
 

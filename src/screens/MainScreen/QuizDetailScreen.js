@@ -256,11 +256,6 @@ class QuizDetailScreen extends React.Component {
                       justifyContent: 'flex-end'
                     }}
                     span={12}>
-                    <Link to={'/quiz/exam/' + eid}>
-                      <Button>See More</Button>
-                    </Link>
-                  </Col>
-                  <Col span={24}>
                     <Button
                       type="primary"
                       shape="round"
@@ -273,6 +268,11 @@ class QuizDetailScreen extends React.Component {
                       size={50}>
                       Delete
                     </Button>
+                  </Col>
+                  <Col span={24}>
+                    <Link to={'/quiz/exam/' + eid}>
+                      <Button>See More</Button>
+                    </Link>
                   </Col>
                   {
                     exams[eid].error_msg

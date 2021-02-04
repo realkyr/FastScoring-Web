@@ -44,6 +44,7 @@ export default class QuizSolutionScreen extends React.Component {
   componentDidMount () {
     const db = firebase.firestore()
     const ref = db.collection('quizzes').doc(this.quizid)
+
     this.unsub = ref.onSnapshot(async snapshots => {
       const quiz = snapshots.exists ? snapshots.data() : {}
       if (snapshots.exists) {
@@ -74,8 +75,15 @@ export default class QuizSolutionScreen extends React.Component {
       })
     })
     const user = firebase.auth().currentUser
+    // listen to standard form
+    this.unsub_std_form = db.collection('forms').doc('hl1xtxWD7QzZYpTr7yWA').onSnapshot(std => {
+      const forms = { ...this.state.forms }
+      forms[std.id] = std.data()
+      this.setState({ forms })
+    })
+
     this.unsub_form = db.collection('forms').where('owner', '==', user.uid).onSnapshot(snapshots => {
-      const forms = {}
+      const forms = { ...this.state.forms }
       snapshots.forEach(f => {
         forms[f.id] = f.data().name || 'ฟอร์มที่ยังไม่มีชื่อ'
       })
@@ -87,6 +95,7 @@ export default class QuizSolutionScreen extends React.Component {
     this.unsub && this.unsub()
     this.unsub_form && this.unsub_form()
     this.unsub_quiz && this.unsub_quiz()
+    this.unsub_std_form && this.unsub_std_form()
   }
 
   async _uploadSolution ({ file }) {

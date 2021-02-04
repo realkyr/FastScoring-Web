@@ -30,6 +30,13 @@ export default class FormScreen extends React.Component {
     const user = firebase.auth().currentUser
     const ref = db.collection('forms')
 
+    // listen to form standard
+    this.unsub_standard = ref.doc('hl1xtxWD7QzZYpTr7yWA').onSnapshot(std => {
+      const forms = { ...this.state.forms }
+      forms[std.id] = std.data()
+      this.setState({ forms })
+    })
+
     // listen for form update
     this.unsub = ref.where('owner', '==', user.uid).onSnapshot(snapshots => {
       console.log('listener init')
@@ -71,9 +78,34 @@ export default class FormScreen extends React.Component {
         </Col>
       )
     }
-    return [...Object.keys(forms).map(fid => {
-      const url = forms[fid].url || {}
-      return (
+    return [
+      <Col key="add-form-button" xs={24} md={12} lg={6}>
+        <div
+          onClick={this.toggleModal}
+          style={{
+            borderRadius: '5px',
+            boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
+            cursor: 'pointer',
+            background: 'white',
+            width: '100%',
+            overflow: 'hidden',
+            height: 280,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+          <Button
+            onClick={this.toggleModal}
+            size="large"
+            type="primary"
+            shape="circle"
+            icon={<PlusOutlined />}
+          />
+        </div>
+    </Col>,
+      ...Object.keys(forms).map(fid => {
+        const url = forms[fid].url || {}
+        return (
           <Col key={fid} xs={24} md={12} lg={6}>
             <Link to={'/form/' + fid}>
               <div
@@ -98,32 +130,8 @@ export default class FormScreen extends React.Component {
               </div>
             </Link>
           </Col>
-      )
-    }),
-    <Col key="add-form-button" xs={24} md={12} lg={6}>
-        <div
-          onClick={this.toggleModal}
-          style={{
-            borderRadius: '5px',
-            boxShadow: '0 5px 12px 4px rgba(0,0,0,.09)',
-            cursor: 'pointer',
-            background: 'white',
-            width: '100%',
-            overflow: 'hidden',
-            height: 280,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-          <Button
-            onClick={this.toggleModal}
-            size="large"
-            type="primary"
-            shape="circle"
-            icon={<PlusOutlined />}
-          />
-        </div>
-    </Col>
+        )
+      })
     ]
   }
 

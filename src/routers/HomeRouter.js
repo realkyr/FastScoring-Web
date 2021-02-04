@@ -39,7 +39,7 @@ const RootRouter = () => {
     const storage = firebase.storage()
     try {
       const url = await storage.ref().child(path).getDownloadURL()
-      setAvatar(url)
+      setAvatar(() => url)
     } catch (error) {
       console.log(error)
       message.error('something is wrong with avatar')
@@ -50,19 +50,20 @@ const RootRouter = () => {
 
   useEffect(() => {
     console.log(location.pathname)
+    let unsub
     firebase.auth().onAuthStateChanged(async user => {
       if (user) {
         const db = firebase.firestore()
-        try {
-          const doc = await db.collection('users').doc(user.uid).get()
-          if (doc.exists) {
-            const info = doc.data()
-            setName(`${info.fname || ''} ${info.lname || ''}`)
+        unsub = db.collection('users').doc(user.uid).onSnapshot(async u => {
+          if (u.exists) {
+            const info = u.data()
+            const name = `${info.fname || ''} ${info.lname || ''}`
+            if (!name.trim()) {
+              setName(() => 'Guest')
+            } else setName(() => name)
             if (info.picture_profile) await getAvatar(info.picture_profile)
-          } else setName('Guest')
-        } catch (error) {
-          message.error('there is some problem with user infomation')
-        }
+          } else setName(() => 'Guest')
+        })
         setAuth(true)
       } else setAuth(false)
     })
@@ -75,6 +76,7 @@ const RootRouter = () => {
     window.addEventListener('resize', reportWindowSize)
 
     return () => {
+      unsub && unsub()
       window.removeEventListener('resize', reportWindowSize)
     }
   }, [])

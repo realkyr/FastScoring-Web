@@ -18,8 +18,18 @@ export default function FormDetailScreen (props) {
   const [form, setForm] = useState(null)
   // const [isLoading, setLoading] = useState(false)
 
-  const deleteToggle = () => setDeleteConfirm(!deleteConfirm)
+  const deleteToggle = () => {
+    if (id === 'hl1xtxWD7QzZYpTr7yWA') {
+      message.error('ไม่สามารถลบฟอร์มมาตรฐานได้')
+      return
+    }
+    setDeleteConfirm(!deleteConfirm)
+  }
   const editToggle = () => {
+    if (id === 'hl1xtxWD7QzZYpTr7yWA') {
+      message.error('ไม่สามารถแก้ไขฟอร์มมาตรฐานได้')
+      return
+    }
     if (!prevent('Form', form)) return
     setEditForm(!editForm)
   }

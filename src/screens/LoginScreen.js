@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Layout, Button, Input, message, Spin } from 'antd'
+import { Layout, Button, Input, message, Spin, Image, Typography } from 'antd'
 import { LoginOutlined, LoadingOutlined } from '@ant-design/icons'
 import OtpInput from 'react-otp-input'
 import { Redirect } from 'react-router-dom'
@@ -7,6 +7,8 @@ import axios from 'axios'
 import firebase from 'firebase/app'
 import 'firebase/firestore'
 import 'firebase/auth'
+
+const { Title, Paragraph } = Typography
 
 export default function LoginScreen () {
   const { useState } = React
@@ -38,6 +40,7 @@ export default function LoginScreen () {
   if (!otpShown) {
     screen = (
       <>
+        <Title style={{ wordWrap: 'break-word' }} level={4}>กรอก E-mail เพื่อเข้าใช้งาน</Title>
         <Input
           onChange={e => {
             setEmail(e.target.value)
@@ -85,7 +88,7 @@ export default function LoginScreen () {
   } else {
     screen = (
       <>
-        <p>กรุณากรอกรหัส OTP ที่ได้รับใน E-mail ภายในเวลา 15 นาที</p>
+        <Paragraph>กรุณากรอกรหัส OTP ที่ได้รับใน E-mail ภายในเวลา 15 นาที</Paragraph>
         <OtpInput
           inputStyle={{
             width: '1em',
@@ -94,6 +97,10 @@ export default function LoginScreen () {
             fontSize: '2rem',
             borderRadius: '4px',
             border: '1px solid rgba(0,0,0,0.3)'
+          }}
+          containerStyle={{
+            justifyContent: 'center',
+            marginBottom: 10
           }}
           value={otp}
           onChange={setOTP}
@@ -150,10 +157,31 @@ export default function LoginScreen () {
       {
         auth === null
           ? <Spin indicator={loadingIcon} />
-          : <>
-            <h1>Login Screen</h1>
-            {screen}
-          </>
+          : <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            background: 'white',
+            padding: 50,
+            height: '50vh',
+            maxWidth: '90vw',
+            minHeight: 500,
+            borderRadius: 25,
+            boxShadow: '0 4px 8px 0 rgba(0,0,0,0.2)'
+          }}>
+              <Image
+                src={require('../assets/img/logo.png').default}
+                preview={false}
+              />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                flexDirection: 'column'
+              }}>
+                {screen}
+              </div>
+              <div />
+            </div>
       }
     </Layout>
   )
