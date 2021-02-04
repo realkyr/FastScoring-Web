@@ -296,7 +296,6 @@ export default class FormModal extends React.Component {
     const { cropper, step } = this.state
 
     const storage = firebase.storage()
-    const user = firebase.auth().currentUser
 
     const sheet = {}
     if (step === 1) {
@@ -306,8 +305,8 @@ export default class FormModal extends React.Component {
       sheet.pic = 'answerSheetJPG'
       sheet.error = 'error_ans_msg'
       sheet.result = 'answerResult'
+      sheet.coords = 'answer_sheet_coords'
       sheet.analysed = 'analysed_answersheet_path'
-      sheet.path = 'answer_sheet_path'
       sheet.payload = {
         column: this.state.column,
         amount: this.state.amount
@@ -316,8 +315,8 @@ export default class FormModal extends React.Component {
       sheet.type = 'student'
       sheet.message = 'stuMessage'
       sheet.status = 'stu_status'
-      sheet.path = 'student_path'
       sheet.error = 'error_stu_msg'
+      sheet.coords = 'student_coords'
       sheet.result = 'studentResult'
       sheet.analysed = 'analysed_stu_path'
       sheet.payload = {
@@ -328,8 +327,8 @@ export default class FormModal extends React.Component {
     // add payload which contain the same data
     sheet.payload = {
       ...sheet.payload,
-      [sheet.status]: this.state[sheet.message] ? 'resend' : 'pending',
-      [sheet.path]: `/forms/${user.uid}/${this.formRef.id}_${sheet.type}.png`
+      [sheet.coords]: cropper.getData(),
+      [sheet.status]: this.state[sheet.message] ? 'resend' : 'pending'
     }
 
     this.unsub && this.unsub()
@@ -340,12 +339,7 @@ export default class FormModal extends React.Component {
       sheet.payload,
       { merge: true }
     )
-    this._uploadStorage({
-      type: sheet.type,
-      tag: 'png',
-      file: cropper.getCroppedCanvas().toDataURL(),
-      isURL: true
-    })
+
     this.unsub = this.formRef.onSnapshot(async s => {
       const info = s.data()
       switch (info[sheet.status]) {
