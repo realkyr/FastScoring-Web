@@ -11,6 +11,7 @@
     "axios": "^0.21.0",
     "cropperjs": "^1.5.9",
     "firebase": "^8.0.1",
+    "image-size": "^0.9.7",
     "pdfjs-dist": "^2.5.207",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",

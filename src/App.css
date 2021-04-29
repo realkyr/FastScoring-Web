@@ -79,3 +79,31 @@ body {
   width: auto;
   max-width: 100%;
 }
+
+.choices {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid;
+  z-index: 100;
+  cursor: pointer;
+}
+
+.choices.correct {
+  border: 2px solid lime;
+}
+
+.choices.user-choice {
+  border: 2px solid blue;
+}
+
+.choices.select-to-edit {
+  border: 2px solid yellow !important;
+}
+
+.choices.solution-choice {
+  border: 2px solid darkred;
+}
+
+.choices:hover {
+  border: 2px solid orange;
+}

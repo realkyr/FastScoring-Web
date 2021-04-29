@@ -12,7 +12,8 @@ import {
   Modal,
   Col,
   Steps,
-  Button
+  Button,
+  InputNumber
 } from 'antd'
 import { UploadOutlined, LoadingOutlined } from '@ant-design/icons'
 import firebase from 'firebase/app'
@@ -40,6 +41,8 @@ export default class FormModal extends React.Component {
       ? {
           column: props.form.column,
           amount: props.form.amount,
+          num_choice: props.form.num_choice,
+          stu_column: props.form.stu_column,
           answerResult: url.answersheet || null,
           studentResult: url.student || null,
           ansMessage: props.form.error_ans_msg || null,
@@ -48,7 +51,9 @@ export default class FormModal extends React.Component {
         }
       : {
           column: 1,
+          num_choice: 5,
           amount: 20,
+          stu_column: 8,
           ansMessage: null,
           answerResult: null,
           stuMessage: null,
@@ -192,21 +197,46 @@ export default class FormModal extends React.Component {
                 }}
               >
                 <Text>ระบุจำนวนข้อ: </Text>
-                <Input
+                <InputNumber
                   style={{ width: '100%' }}
-                  onChange={e => {
-                    let amount = e.target.value
-                    if (amount === '') amount = 0
-                    if (!isNaN(amount)) {
-                      amount = parseInt(amount)
-                      this.setState({ amount })
-                    }
-                  }}
+                  min={1} defaultValue={20}
+                  onChange={(amount) => this.setState({ amount })}
                   value={this.state.amount}
-                  placeholder="20"
                 />
               </Col>
               <Col
+                xs={24}
+                md={12}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <Text>จำนวนตัวเลือก: </Text>
+                <InputNumber
+                  style={{ width: '100%' }}
+                  value={this.state.num_choice} min={1} max={5} defaultValue={5}
+                  onChange={(v) => this.setState({ num_choice: v })}
+                />
+              </Col>
+              <Col
+                xs={24}
+                md={12}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <Text>จำนวนหลักรหัสนักศึกษา: </Text>
+                <InputNumber
+                  style={{ width: '100%' }}
+                  value={this.state.stu_column} min={1} max={10} defaultValue={8}
+                  onChange={(v) => this.setState({ stu_column: v })}
+                />
+              </Col>
+              {/* <Col
                 xs={24}
                 style={{
                   display: 'flex',
@@ -221,7 +251,7 @@ export default class FormModal extends React.Component {
                   value={5}
                   placeholder="20"
                 />
-              </Col>
+              </Col> */}
             </Row>
             <Row align="center">
               <Col style={{
@@ -299,6 +329,7 @@ export default class FormModal extends React.Component {
 
     const sheet = {}
     if (step === 1) {
+      console.log('stu', this.state.stu_column)
       sheet.type = 'answersheet'
       sheet.status = 'answer_status'
       sheet.message = 'ansMessage'
@@ -309,7 +340,8 @@ export default class FormModal extends React.Component {
       sheet.analysed = 'analysed_answersheet_path'
       sheet.payload = {
         column: this.state.column,
-        amount: this.state.amount
+        amount: this.state.amount,
+        num_choice: this.state.num_choice
       }
     } else {
       sheet.type = 'student'
@@ -320,7 +352,7 @@ export default class FormModal extends React.Component {
       sheet.result = 'studentResult'
       sheet.analysed = 'analysed_stu_path'
       sheet.payload = {
-        stu_column: 8
+        stu_column: this.state.stu_column
       }
     }
 
