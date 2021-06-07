@@ -20,6 +20,7 @@ import {
   Typography
 } from 'antd'
 import { InboxOutlined, EditOutlined } from '@ant-design/icons'
+import ScoreCalculator from '../../components/quiz/ScoreCalculator'
 
 import firebase from 'firebase/app'
 import 'firebase/firestore'
@@ -49,7 +50,8 @@ class QuizDetailScreen extends React.Component {
     super(props)
     this.state = {
       quiz: null,
-      exams: null
+      exams: null,
+      order: null
     }
 
     this.upload = this.upload.bind(this)
@@ -61,6 +63,9 @@ class QuizDetailScreen extends React.Component {
     const ref = db
       .collection('exams')
       .where('quiz', '==', db.collection('quizzes').doc(quizid))
+      .orderBy('createDate', 'desc')
+      .orderBy('sid')
+      .orderBy('filename')
     const qref = db.collection('quizzes').doc(quizid)
     this.quiz_unsub = qref.onSnapshot(q => {
       if (q.exists) {
@@ -84,12 +89,15 @@ class QuizDetailScreen extends React.Component {
     // add listener
     this.unsub = ref.onSnapshot(snapshot => {
       const exams = {}
+      const order = []
       snapshot.forEach(s => {
         exams[s.id] = s.data()
+        order.push(s.id)
       })
       console.log(exams)
       this.setState({
-        exams
+        exams,
+        order
       })
     })
   }
@@ -116,7 +124,9 @@ class QuizDetailScreen extends React.Component {
       filename: file.name,
       status: 'uploading',
       owner: user.uid,
-      quiz: db.collection('quizzes').doc(quizid)
+      sid: 'detecting student id',
+      quiz: db.collection('quizzes').doc(quizid),
+      createDate: firebase.firestore.FieldValue.serverTimestamp()
     })
     const uploadTask = storageRef.put(file)
 
@@ -202,7 +212,7 @@ class QuizDetailScreen extends React.Component {
 
     const calculateMaxScore = () => {
       if (!quiz || !quiz.amount) return 'ไม่ระบุคะแนนเต็ม'
-      return quiz.amount
+      return quiz.amount * (quiz.point_per_clause || 1)
     }
 
     // eslint-disable-next-line no-unused-vars
@@ -216,7 +226,7 @@ class QuizDetailScreen extends React.Component {
       }
       return (
         <Collapse className="exams-result">
-          {Object.keys(exams).map(eid => {
+          {this.state.order.map(eid => {
             return (
               <Panel
                 key={eid}
@@ -289,6 +299,34 @@ class QuizDetailScreen extends React.Component {
       )
     }
 
+    const exportJSON = () => {
+      const exportName = quiz.name + '_result'
+      const exportObj = {
+        quiz_name: quiz.name,
+        examiners: Object.keys(exams).length,
+        students: {}
+      }
+
+      Object.keys(exams).forEach(id => {
+        const result = {}
+        Object.keys(exams[id].result).forEach(clause => {
+          const ret = exams[id].result[clause]
+          result[clause] = {
+            user_choice: ret.user_choice.sort(),
+            correct_choice: ret.correct_choice.sort()
+          }
+        })
+        exportObj.students[id] = result
+      })
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObj))
+      const downloadAnchorNode = document.createElement('a')
+      downloadAnchorNode.setAttribute('href', dataStr)
+      downloadAnchorNode.setAttribute('download', exportName + '.json')
+      document.body.appendChild(downloadAnchorNode) // required for firefox
+      downloadAnchorNode.click()
+      downloadAnchorNode.remove()
+    }
+
     // calculate statistics
     let pass = 0
     let fail = 0
@@ -304,7 +342,7 @@ class QuizDetailScreen extends React.Component {
           pass += 1
           return
         }
-        if (score >= quiz.amount / 2) pass += 1
+        if (score >= (quiz.amount * (quiz.point_per_clause || 1)) / 2) pass += 1
         else fail += 1
       }
     })
@@ -342,6 +380,22 @@ class QuizDetailScreen extends React.Component {
             Edit Solution
           </Button>
         </Link>
+        {
+          quiz.ranking_sheet
+            ? <Button
+                type="primary"
+                style={{
+                  float: 'right',
+                  backgroundColor: '#0F9D58'
+                }}
+                onClick={() => { window.open(`https://docs.google.com/spreadsheets/d/${quiz.ranking_sheet}`) }}
+                shape="round"
+                icon={<EditOutlined />}
+                size={50}>
+                GOOGLE SHEETS
+              </Button>
+            : null
+        }
         <Button
           type="primary"
           shape="round"
@@ -439,7 +493,8 @@ class QuizDetailScreen extends React.Component {
             />
           </Col>
         </Row>
-
+        <ScoreCalculator quiz={quiz} exam={this.state.exams} />
+        <Button onClick={exportJSON} type="primary">Export ผลการตรวจเป็น JSON</Button>
         <Collapse>
           <Panel
             className="site-collapse-custom-collapse"

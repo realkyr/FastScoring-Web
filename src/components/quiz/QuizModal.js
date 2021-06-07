@@ -10,21 +10,22 @@ import {
   Col,
   Steps,
   Button,
-  Image
+  Space,
+  Radio,
+  Image,
+  InputNumber
 } from 'antd'
 import { UploadOutlined, LoadingOutlined } from '@ant-design/icons'
 import firebase from 'firebase/app'
 import 'firebase/firestore'
 import 'firebase/auth'
 import 'firebase/storage'
-import Title from 'antd/lib/skeleton/Title'
-
 const pdfjsLib = require('pdfjs-dist/es5/build/pdf.js')
 const pdfjsWorker = require('pdfjs-dist/build/pdf.worker.entry')
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-const { Text } = Typography
+const { Text, Title } = Typography
 const { Step } = Steps
 const { Option } = Select
 
@@ -38,7 +39,9 @@ export default class QuizModal extends React.Component {
       isLoading: false,
       stepStatus: 'process',
       detail: null,
-      solution: null
+      solution: null,
+      point_per_clause: 1,
+      multiple_choice: 'all'
     }
     this.state = this.initialState
     const db = firebase.firestore()
@@ -63,7 +66,9 @@ export default class QuizModal extends React.Component {
           .collection('forms')
           .doc(selectedForm),
         owner: user.uid,
-        amount: this.state.amount
+        amount: this.state.amount,
+        point_per_clause: this.state.point_per_clause,
+        multiple_choice: this.state.multiple_choice
       },
       { merge: true }
     )
@@ -168,6 +173,43 @@ export default class QuizModal extends React.Component {
                 placeholder="20"
               />
             </Col>
+            <Col xs={24} md={12}>
+              <Text>ข้อละ</Text>{' '}
+              <InputNumber
+                min={1}
+                style={{ width: '60%' }}
+                value={this.state.point_per_clause}
+                onChange={n =>
+                  this.setState({
+                    point_per_clause: n
+                  })
+                }
+              />
+              <Text>คะแนน</Text>
+            </Col>
+            <Col
+              xs={24}
+              md={12}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start'
+              }}>
+              <Title level={5}>คำตอบหลายข้อ</Title>
+              <Radio.Group
+                onChange={e =>
+                  this.setState({
+                    multiple_choice: e.target.value
+                  })
+                }
+                value={this.state.multiple_choice}>
+                <Space style={{ alignItems: 'flex-start' }} direction="vertical">
+                  <Radio value={'all'}>ต้องตอบถูกต้องทุกตัวเลือก</Radio>
+                  <Radio value={'minimum'}>ตอบถูกอย่างน้อยหนึ่งข้อ</Radio>
+                  <Radio value={'average'}>เฉลี่ยคะแนน</Radio>
+                </Space>
+              </Radio.Group>
+            </Col>
           </Row>
         )
       }
@@ -175,14 +217,18 @@ export default class QuizModal extends React.Component {
         const { solution } = this.state
         return (
           <>
-            {
-              solution ? <Image style={{ marginBottom: 10 }} src={solution} /> : null
-            }
+            {solution
+              ? (
+                  <Image style={{ marginBottom: 10 }} src={solution} />
+                )
+              : null}
             <Upload
               disabled={this.state.isLoading}
               showUploadList={false}
               customRequest={this._uploadSolution}>
-              <Button disabled={this.state.isLoading} icon={<UploadOutlined />}>เลือกไฟล์เฉลย</Button>
+              <Button disabled={this.state.isLoading} icon={<UploadOutlined />}>
+                เลือกไฟล์เฉลย
+              </Button>
             </Upload>
           </>
         )
@@ -236,7 +282,7 @@ export default class QuizModal extends React.Component {
             icon={
               this.state.isLoading && this.state.step === 2
                 ? (
-                    <LoadingOutlined />
+                  <LoadingOutlined />
                   )
                 : null
             }

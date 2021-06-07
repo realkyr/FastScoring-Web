@@ -75,8 +75,7 @@ export default function EditChoicesModal (props) {
           for (const c of Object.keys(editAnswer)) {
             result[c].user_choice = editAnswer[c]
             console.log(c, editAnswer[c])
-            const equals = (a, b) => JSON.stringify(a.sort()) === JSON.stringify(b.sort())
-            result[c].correct = equals(result[c].user_choice, result[c].correct_choice)
+            result[c].correct = props.calculateScore(result[c])
           }
           await ref.update({
             result
@@ -168,5 +167,6 @@ EditChoicesModal.propTypes = {
   setVisible: PropTypes.func,
   image: PropTypes.string,
   form: PropTypes.object,
-  exam: PropTypes.object
+  exam: PropTypes.object,
+  calculateScore: PropTypes.func
 }

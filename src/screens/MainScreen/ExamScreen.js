@@ -10,7 +10,9 @@ import {
   Typography,
   Table,
   message,
-  Select
+  Select,
+  Button,
+  Space
 } from 'antd'
 import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons'
 
@@ -26,6 +28,7 @@ export default function ExamScreen () {
   const { examid } = useParams()
   const [visible, setVisible] = useState(false)
   const [exam, setExam] = useState(null)
+  const [quiz, setQuiz] = useState(null)
   const [form, setForm] = useState(null)
   const [original, setOriginal] = useState(null)
   const [result, setResult] = useState(null)
@@ -67,6 +70,7 @@ export default function ExamScreen () {
         const qdoc = await examInfo.quiz.get()
         const formdoc = await qdoc.data().form.get()
         const form = formdoc.data()
+        setQuiz(qdoc.data())
         setForm(form)
         setMode('form')
         const qid = qdoc.id
@@ -119,6 +123,29 @@ export default function ExamScreen () {
     }
   }, [result])
 
+  const exportJSON = () => {
+    const exportName = exam.sid + '_result'
+    const exportObj = {
+      quiz_name: quiz.name,
+      student_id: exam.sid,
+      result: {}
+    }
+    Object.keys(exam.result).forEach(clause => {
+      const ret = exam.result[clause]
+      exportObj.result[clause] = {
+        user_choice: ret.user_choice.sort(),
+        correct_choice: ret.correct_choice.sort()
+      }
+    })
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObj))
+    const downloadAnchorNode = document.createElement('a')
+    downloadAnchorNode.setAttribute('href', dataStr)
+    downloadAnchorNode.setAttribute('download', exportName + '.json')
+    document.body.appendChild(downloadAnchorNode) // required for firefox
+    downloadAnchorNode.click()
+    downloadAnchorNode.remove()
+  }
+
   const img = () => {
     if (original == null || result == null) {
       return <Skeleton paragraph={false} />
@@ -137,7 +164,9 @@ export default function ExamScreen () {
             }} value={exam.sid} placeholder="รหัสนักศึกษา" />
           </Col>
           <Col xs={12}>
-            <EditChoicesModal exam={exam} form={form} setVisible={toggleModal} visible={visible} image={result} />
+            <Space>
+              <EditChoicesModal calculateScore={calculateScore} exam={exam} form={form} setVisible={toggleModal} visible={visible} image={result} />
+            </Space>
           </Col>
         </Row>
         <Row className="result-images">
@@ -202,21 +231,47 @@ export default function ExamScreen () {
     )
   }
 
-  const dataSource = exam
+  const same = (a, b) => {
+    const ret = []
+    a.sort()
+    b.sort()
+    for (let i = 0; i < a.length; i += 1) {
+      if (b.indexOf(a[i]) > -1) {
+        ret.push(a[i])
+      }
+    }
+    return ret
+  }
+
+  const calculateScore = ret => {
+    if (ret.correct_choice.length === 0 || ret.user_choice.length > ret.correct_choice.length) return 0
+    if (quiz.multiple_choice && quiz.multiple_choice === 'minimum') {
+      if (same(ret.user_choice, ret.correct_choice).length >= 1) return quiz.point_per_clause || 1
+    } else if (quiz.multiple_choice && quiz.multiple_choice === 'average') {
+      return parseFloat(((same(ret.user_choice, ret.correct_choice).length / ret.correct_choice.length) * (quiz.point_per_clause || 1)).toFixed(2))
+    } else if (same(ret.user_choice, ret.correct_choice).length === ret.correct_choice.length) {
+      return quiz.point_per_clause || 1
+    }
+
+    return 0
+  }
+
+  const dataSource = exam && quiz
     ? Object.keys(exam.result).map(clause => {
+        const ret = exam.result[clause]
         return {
           key: clause,
           clause,
-          user_choice: exam.result[clause].user_choice.sort().join(', '),
-          correct_choice: exam.result[clause].correct_choice.sort().join(', '),
-          correct: exam.result[clause].correct
+          user_choice: ret.user_choice.sort().join(', '),
+          correct_choice: ret.correct_choice.sort().join(', '),
+          correct: ret.correct
             ? (
               <CheckCircleFilled style={{ color: '#52c41a' }} />
               )
             : (
               <CloseCircleFilled style={{ color: '#ff4d4f' }} />
               ),
-          score: exam.result[clause].correct ? 1 : 0
+          score: calculateScore(ret)
         }
       })
     : []
@@ -255,13 +310,18 @@ export default function ExamScreen () {
 
   return (
     <div>
-      {exam === null
+      {exam === null || quiz === null
         ? (
           <Skeleton paragraph={false} active />
           )
         : (
         <>
           {img()}
+          <Row>
+            <Col>
+              <Button onClick={exportJSON} type="primary">Export ผลคำตอบเป็น JSON</Button>
+            </Col>
+          </Row>
           <Table
             pagination={{
               hideOnSinglePage: true
@@ -269,7 +329,7 @@ export default function ExamScreen () {
             footer={() => {
               let sum = 0
               dataSource.forEach(clause => {
-                sum += clause.score
+                sum += parseFloat(clause.score)
               })
               return `คะแนนรวม ${sum}`
             }}
