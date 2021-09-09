@@ -1,6 +1,7 @@
 const functions = require('firebase-functions')
 const admin = require('firebase-admin')
 const serviceAccount = require('./fastscoring-7adb34525352.json')
+const mail = require('./mail.json')
 const { google } = require('googleapis')
 
 // // Create and Deploy Your First Cloud Functions
@@ -35,8 +36,8 @@ admin.initializeApp({
 });
 
 const mailgun = require("mailgun-js")
-const api_key = '***sensitivedata***'
-const DOMAIN = 'mail.slippingsloth.com'
+const api_key = mail.apiKey
+const DOMAIN = mail.domain
 const mg = mailgun({apiKey: api_key, domain: DOMAIN})
 
 const express = require('express')
